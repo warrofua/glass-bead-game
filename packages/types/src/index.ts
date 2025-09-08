@@ -49,6 +49,8 @@ export interface JudgmentScroll {
 
 // --- Validation helpers ---
 
+import { sanitizeMarkdown } from "./sanitizeMarkdown";
+
 /** Validate that a seed has non-empty text and domain. */
 export function validateSeed(seed: Seed): boolean {
   return !!seed && !!seed.id && seed.text.trim().length > 0 && seed.domain.trim().length > 0;
@@ -65,8 +67,8 @@ export function validateMove(move: Move, state: GameState): boolean {
     const bead = move.payload?.bead as Bead | undefined;
     if (!bead) return false;
     if (bead.modality !== "text") return false;
+    bead.content = sanitizeMarkdown(bead.content);
     if (typeof bead.content !== "string" || bead.content.trim().length === 0) return false;
-    if (bead.content.length > 10_000) return false;
     if (typeof bead.complexity !== "number" || bead.complexity < 1 || bead.complexity > 5) return false;
     if (typeof bead.title === "string" && bead.title.length > 80) return false;
     if (bead.seedId && !state.seeds.find((s) => s.id === bead.seedId)) return false;
@@ -90,3 +92,5 @@ export function validateMove(move: Move, state: GameState): boolean {
 
   return true; // other move types are treated as valid for now
 }
+
+export { sanitizeMarkdown };
