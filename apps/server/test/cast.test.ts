@@ -33,7 +33,7 @@ test('cast move broadcasts new bead to all players', async (t) => {
     env: { ...process.env, PORT: '9999' },
     stdio: ['ignore', 'pipe', 'pipe']
   });
-  await new Promise(res => setTimeout(res, 500));
+  await new Promise(res => setTimeout(res, 1000));
   t.after(() => {
     server.kill();
   });

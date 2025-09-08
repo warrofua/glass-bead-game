@@ -15,6 +15,7 @@ import {
   validateMove,
   sanitizeMarkdown,
 } from "@gbg/types";
+import { recordMove, recordWsFailure, getMetrics } from "./metrics.js";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -22,7 +23,6 @@ await fastify.register(cors, { origin: true });
 // In-memory store
 const matches = new Map<string, GameState>();
 const sockets = new Map<string, Set<WebSocket>>();
-const metrics = { wsSendFailures: 0, totalMoves: 0 };
 
 // --- Utility
 function now(){ return Date.now(); }
@@ -41,23 +41,10 @@ function broadcast(matchId: string, type: string, payload: any){
     try{
       ws.send(msg);
     }catch(err){
-      metrics.wsSendFailures++;
-      console.warn('WS send failed', err, { wsSendFailures: metrics.wsSendFailures });
+      recordWsFailure();
+      console.warn('WS send failed', err);
     }
   }
-}
-
-function logMetrics(matchId: string, move: Move, state: GameState){
-  const latency = Date.now() - move.timestamp;
-  metrics.totalMoves++;
-  console.log("[metrics]", {
-    matchId,
-    latency,
-    moves: state.moves.length,
-    beads: Object.keys(state.beads).length,
-    edges: Object.keys(state.edges).length,
-    totalMoves: metrics.totalMoves
-  });
 }
 
 // --- Judging Stub (deterministic-ish placeholder)
@@ -88,6 +75,10 @@ function judge(state: GameState): JudgmentScroll {
 }
 
 // --- REST Endpoints
+fastify.get("/metrics", async (_req, reply) => {
+  return reply.send(getMetrics());
+});
+
 fastify.post("/match", async (req, reply) => {
   const id = randomUUID().slice(0,8);
   const state: GameState = {
@@ -174,7 +165,9 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
   state.updatedAt = now();
   broadcast(id, "move:accepted", move);
   broadcast(id, "state:update", state);
-  logMetrics(id, move, state);
+  const latency = Date.now() - move.timestamp;
+  recordMove(latency);
+  console.log(JSON.stringify({ event: "move.accepted", matchId: id, moveId: move.id, playerId: move.playerId, latency }));
   return reply.send({ ok: true });
 });
 
@@ -184,6 +177,7 @@ fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) 
   if(!state) return reply.code(404).send({ error: "No such match" });
   const scroll = judge(state);
   broadcast(id, "end:judgment", scroll);
+  console.log(JSON.stringify({ event: "judge.completed", matchId: id, winner: scroll.winner }));
   return reply.send(scroll);
 });
 
