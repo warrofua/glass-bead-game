@@ -1,5 +1,5 @@
 import sanitizeHtml from "sanitize-html";
-export * from "./graph";
+export * from "./graph.js";
 
 export type Modality = "text" | "image" | "audio" | "math" | "code" | "data";
 export type RelationLabel =
@@ -228,5 +228,3 @@ export function replayMoves(initial: GameState, moves: Move[]): GameState {
   }
   return state;
 }
-
-export * from './graph.js';

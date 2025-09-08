@@ -6,7 +6,6 @@ import type { Socket } from "net";
 import WebSocket, { WebSocketServer } from "ws";
 import {
   GameState,
-  Player,
   Bead,
   Move,
   validateMove,
@@ -14,6 +13,7 @@ import {
   sanitizeMarkdown,
 } from "@gbg/types";
 import judge from "./judge/index.js";
+import registerJoinRoute from "./routes/join.js";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -72,25 +72,7 @@ fastify.post("/match", async (req, reply) => {
   return reply.send(state);
 });
 
-fastify.post<{ Params: { id: string } }>("/match/:id/join", async (req, reply) => {
-  const id = req.params.id;
-  const { handle } = (req.body as any) ?? {};
-  const state = matches.get(id);
-  if(!state) return reply.code(404).send({ error: "No such match" });
-  if(state.players.length >= 2) return reply.code(400).send({ error: "Match full" });
-  const player: Player = {
-    id: randomUUID().slice(0,6),
-    handle: sanitizeMarkdown(handle || "Player"+(state.players.length+1)),
-    resources: { insight: 5, restraint: 2, wildAvailable: true }
-  };
-  state.players.push(player);
-  if(!state.currentPlayerId){
-    state.currentPlayerId = player.id;
-  }
-  state.updatedAt = now();
-  broadcast(id, "state:update", state);
-  return reply.send(player);
-});
+registerJoinRoute(fastify, matches, broadcast);
 
 fastify.get<{ Params: { id: string } }>("/match/:id", async (req, reply) => {
   const state = matches.get(req.params.id);
