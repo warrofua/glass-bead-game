@@ -47,3 +47,6 @@ NLI contradiction checks for Integrity, and shingle/LSH rarity for Novelty.
 
 ## Architecture
 ![Architecture Diagram](docs/architecture.svg)
+
+## Additional Documentation
+See [docs/](docs/README.md) for the project vision, product requirements, and development plan.
