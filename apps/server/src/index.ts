@@ -19,7 +19,7 @@ await fastify.register(cors, { origin: true });
 // In-memory store
 const matches = new Map<string, GameState>();
 const sockets = new Map<string, Set<WebSocket>>();
-const metrics = { wsSendFailures: 0, totalMoves: 0 };
+const metrics = { wsSendFailures: 0, totalMoves: 0, latency: 0 };
 
 // --- Utility
 function now(){ return Date.now(); }
@@ -47,6 +47,7 @@ function broadcast(matchId: string, type: string, payload: any){
 function logMetrics(matchId: string, move: Move, state: GameState){
   const latency = Date.now() - move.timestamp;
   metrics.totalMoves++;
+  metrics.latency = latency;
   console.log("[metrics]", {
     matchId,
     latency,
@@ -115,6 +116,8 @@ fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) 
   broadcast(id, "end:judgment", scroll);
   return reply.send(scroll);
 });
+
+fastify.get("/metrics", async () => metrics);
 
 // --- WebSocket (per match)
 const server = fastify.server;
