@@ -10,11 +10,10 @@ import {
   Bead,
   Edge,
   Move,
-  JudgmentScroll,
-  JudgedScores,
   validateMove,
   sanitizeMarkdown,
 } from "@gbg/types";
+import judge from "./judge/index.js";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -60,32 +59,7 @@ function logMetrics(matchId: string, move: Move, state: GameState){
   });
 }
 
-// --- Judging Stub (deterministic-ish placeholder)
-function judge(state: GameState): JudgmentScroll {
-  const scores: Record<string, JudgedScores> = {};
-  for(const p of state.players){
-    const beadCount = Object.values(state.beads).filter(b=>b.ownerId===p.id).length;
-    const edgeCount = Object.values(state.edges).filter(e=> {
-      const owns = state.beads[e.from]?.ownerId === p.id || state.beads[e.to]?.ownerId === p.id;
-      return owns;
-    }).length;
-    const resonance = Math.min(1, (edgeCount / Math.max(1, beadCount)) * 0.6 + 0.2);
-    const aesthetics = Math.min(1, beadCount>0 ? 0.3 + 0.05*beadCount : 0.2);
-    const novelty = 0.4 + 0.1*Math.tanh(beadCount/4);
-    const integrity = 0.5 + 0.1*Math.tanh(edgeCount/5);
-    const resilience = 0.5; // constant for stub
-    const total = 0.30*resonance + 0.20*novelty + 0.20*integrity + 0.20*aesthetics + 0.10*resilience;
-    scores[p.id] = { resonance, aesthetics, novelty, integrity, resilience, total };
-  }
-  const winner = Object.entries(scores).sort((a,b)=>b[1].total - a[1].total)[0]?.[0];
-  return {
-    winner,
-    scores,
-    strongPaths: [],
-    weakSpots: [],
-    missedFuse: undefined
-  };
-}
+// --- Judging pipeline imported from ./judge
 
 // --- REST Endpoints
 fastify.post("/match", async (req, reply) => {
