@@ -21,6 +21,8 @@ export function evaluateAesthetics(beads: Bead[]): number {
     }
   }
 
+  if (sentenceLengths.length === 0) return 0.2; // minimal baseline for empty sentences
+
   const mean = sentenceLengths.reduce((a, b) => a + b, 0) / sentenceLengths.length;
   const variance =
     sentenceLengths.reduce((sum, l) => sum + Math.pow(l - mean, 2), 0) /
