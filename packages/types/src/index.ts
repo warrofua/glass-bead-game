@@ -33,6 +33,7 @@ export interface Cathedral { id: string; content: string; references: string[]; 
 
 export interface GameState {
   id: string; round: 1|2|3|4; phase: string; players: Player[];
+  currentPlayerId?: string;
   seeds: Seed[]; beads: Record<string,Bead>; edges: Record<string,Edge>; moves: Move[];
   twist?: ConstraintCard; cathedral?: Cathedral; createdAt: number; updatedAt: number;
 }

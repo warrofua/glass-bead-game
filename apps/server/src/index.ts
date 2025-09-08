@@ -91,7 +91,7 @@ function judge(state: GameState): JudgmentScroll {
 fastify.post("/match", async (req, reply) => {
   const id = randomUUID().slice(0,8);
   const state: GameState = {
-    id, round: 1, phase:"SeedDraw", players: [], seeds: sampleSeeds(),
+    id, round: 1, phase:"SeedDraw", players: [], currentPlayerId: undefined, seeds: sampleSeeds(),
     beads: {}, edges: {}, moves: [], createdAt: now(), updatedAt: now()
   };
   matches.set(id, state);
@@ -110,6 +110,9 @@ fastify.post<{ Params: { id: string } }>("/match/:id/join", async (req, reply) =
     resources: { insight: 5, restraint: 2, wildAvailable: true }
   };
   state.players.push(player);
+  if(!state.currentPlayerId){
+    state.currentPlayerId = player.id;
+  }
   state.updatedAt = now();
   broadcast(id, "state:update", state);
   return reply.send(player);
@@ -153,6 +156,9 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
   if(!validateMove(move, state)){
     return reply.code(400).send({ error: "Invalid move" });
   }
+  if(state.currentPlayerId && move.playerId !== state.currentPlayerId){
+    return reply.code(403).send({ error: "Not your turn" });
+  }
   move.valid = true;
   state.moves.push(move);
   // naive apply: allow cast and bind minimal
@@ -172,6 +178,11 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
     state.edges[edge.id] = edge;
   }
   state.updatedAt = now();
+  const idx = state.players.findIndex(p=>p.id===move.playerId);
+  if(idx>=0 && state.players.length>0){
+    const next = state.players[(idx+1)%state.players.length];
+    state.currentPlayerId = next.id;
+  }
   broadcast(id, "move:accepted", move);
   broadcast(id, "state:update", state);
   logMetrics(id, move, state);
