@@ -175,3 +175,5 @@ export function replayMoves(initial: GameState, moves: Move[]): GameState {
   }
   return state;
 }
+
+export * from './graph.js';
