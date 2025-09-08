@@ -13,12 +13,12 @@ test('players can join a match and be listed in state', async (t) => {
     env: { ...process.env, PORT: '9998' },
     stdio: ['ignore', 'pipe', 'pipe']
   });
-  await new Promise(res => setTimeout(res, 500));
+  await new Promise(res => setTimeout(res, 1000));
   t.after(() => {
     server.kill();
   });
 
-  const base = 'http://localhost:9998';
+  const base = 'http://127.0.0.1:9998';
 
   const matchRes = await fetch(`${base}/match`, { method: 'POST' });
   const match = await matchRes.json();
