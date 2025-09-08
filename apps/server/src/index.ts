@@ -156,6 +156,9 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
   if(!validateMove(move, state)){
     return reply.code(400).send({ error: "Invalid move" });
   }
+  if(state.currentPlayerId && move.playerId !== state.currentPlayerId){
+    return reply.code(403).send({ error: "Not your turn" });
+  }
   move.valid = true;
   state.moves.push(move);
   // naive apply: allow cast and bind minimal
