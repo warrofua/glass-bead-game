@@ -7,7 +7,7 @@ This plan derives from the MVP and Beta requirements in [`prd.md`](../prd.md). I
 ### apps/server
 - Implement REST endpoints for match lifecycle: `POST /match`, `POST /match/:id/join`, `GET /match/:id`, `POST /match/:id/move`, `POST /match/:id/judge`.
 - Maintain in-memory `matches` store and broadcast state changes via WebSocket `state:update`.
-- Validate Cast and Bind moves: enforce text bead constraints, reject invalid edges, ensure deterministic judge stub.
+- Validate Cast and Bind moves: enforce text bead constraints, reject invalid edges, ensure deterministic judge stub. *(completed)*
 - Provide JSON match log export. *(completed)*
 
 ### apps/web
