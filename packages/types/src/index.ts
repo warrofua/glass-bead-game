@@ -46,3 +46,37 @@ export interface JudgmentScroll {
   weakSpots: string[];
   missedFuse?: string;
 }
+
+// --- Validation helpers ---
+
+/** Validate that a seed has non-empty text and domain. */
+export function validateSeed(seed: Seed): boolean {
+  return !!seed && !!seed.id && seed.text.trim().length > 0 && seed.domain.trim().length > 0;
+}
+
+/**
+ * Validate a move against a given game state. Currently supports basic rules for
+ * `cast` and `bind` moves.
+ */
+export function validateMove(move: Move, state: GameState): boolean {
+  if (!move || !state) return false;
+
+  if (move.type === "cast") {
+    const bead = move.payload?.bead as Bead | undefined;
+    if (!bead) return false;
+    if (bead.modality !== "text") return false;
+    if (typeof bead.content !== "string" || bead.content.trim().length === 0) return false;
+    if (bead.content.length > 280) return false;
+    return true;
+  }
+
+  if (move.type === "bind") {
+    const { from, to, label } = move.payload ?? {};
+    if (!from || !to || from === to) return false;
+    if (!state.beads[from] || !state.beads[to]) return false;
+    if (!label) return false;
+    return true;
+  }
+
+  return true; // other move types are treated as valid for now
+}
