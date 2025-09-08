@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { checkIntegrity } from '../../../judge/integrity';
-import { evaluateAesthetics } from '../../../judge/aesthetics';
-import { judge } from '../../../judge';
+import { checkIntegrity } from '../src/judge/integrity';
+import { evaluateAesthetics } from '../src/judge/aesthetics';
+import { judge } from '../src/judge/index.js';
 import { GameState, Bead, Edge } from '@gbg/types';
 
 function sampleState(): GameState {

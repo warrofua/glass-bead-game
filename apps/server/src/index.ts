@@ -14,7 +14,7 @@ import {
   validateMove,
   sanitizeMarkdown,
 } from "@gbg/types";
-import { judge } from "../../judge/index";
+import { judge } from "./judge/index.js";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
