@@ -110,10 +110,12 @@ export function validateMove(move: Move, state: GameState): boolean {
     const bead = move.payload?.bead as Bead | undefined;
     if (!bead) return false;
     if (bead.modality !== "text") return false;
-    if (typeof bead.content !== "string" || bead.content.trim().length === 0) return false;
+    if (typeof bead.content !== "string") return false;
+    if (bead.content.trim().length === 0) return false;
     bead.content = sanitizeMarkdown(bead.content);
     if (bead.content.length > 10_000) return false;
-    if (typeof bead.complexity !== "number" || bead.complexity < 1 || bead.complexity > 5) return false;
+    if (typeof bead.complexity !== "number" || bead.complexity < 1 || bead.complexity > 5)
+      return false;
     if (typeof bead.title === "string") {
       bead.title = sanitizeMarkdown(bead.title);
       if (bead.title.length > 80) return false;
