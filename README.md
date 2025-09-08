@@ -18,9 +18,22 @@ npm install
 npm run dev
 # web: http://localhost:5173  |  server: http://localhost:8787
 ```
-If `npm install` fails with `Unsupported URL Type "workspace:"`, replace any `workspace:*` entries in subpackage `package.json` files with relative `file:` links (e.g., `file:../../packages/types`).
+If `npm install` fails with `Unsupported URL Type "workspace:"`, replace any `workspace:*` entries in subpackage `package.json`
+files with relative `file:` links (e.g., `file:../../packages/types`).
 Open two browser windows, choose distinct handles, and join/create the same match ID.
 To export a match log for replay or analysis, use the **Export Log** button in the UI or `GET /match/{id}/log`.
+
+## How to Play (MVP)
+1. Run `npm run dev` and open the web client at `http://localhost:5173`.
+2. In two browser windows, enter the same match ID to create or join a match.
+3. Take turns casting beads (concepts) and binding them with strings (relationships).
+4. Every move is validated by the server and synced live between players.
+5. Export the log when finished for replay or analysis.
+
+## Judge v0/v1
+The current prototype includes a deterministic **Magister Ludi** judge (v0) that scores basic\
+Resonance and Aesthetics. The planned v1 upgrade introduces path embeddings for Resonance,\
+NLI contradiction checks for Integrity, and shingle/LSH rarity for Novelty.
 
 ## Scripts
 - `npm run dev` — runs server + web concurrently
@@ -31,3 +44,6 @@ To export a match log for replay or analysis, use the **Export Log** button in t
 - Data is in‑memory (ephemeral). Suitable for local testing.
 - The judge is a deterministic stub; replace with your LLM/embedding pipeline later.
 - See `/packages/types/src/index.ts` for the move schema.
+
+## Architecture
+![Architecture Diagram](docs/architecture.svg)

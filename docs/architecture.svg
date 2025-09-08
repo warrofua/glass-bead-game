@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="220" font-family="sans-serif" font-size="14">
+  <rect x="40" y="60" width="150" height="80" fill="#E0F7FF" stroke="#333"/>
+  <text x="115" y="100" text-anchor="middle">Client</text>
+  <text x="115" y="120" text-anchor="middle">(React/Vite)</text>
+
+  <rect x="235" y="40" width="150" height="120" fill="#E8F5E9" stroke="#333"/>
+  <text x="310" y="80" text-anchor="middle">Server</text>
+  <text x="310" y="100" text-anchor="middle">(Fastify + WS)</text>
+  <text x="310" y="120" text-anchor="middle">Match State</text>
+
+  <rect x="430" y="60" width="150" height="80" fill="#FDEBD0" stroke="#333"/>
+  <text x="505" y="100" text-anchor="middle">Judge</text>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333" />
+    </marker>
+  </defs>
+
+  <line x1="190" y1="100" x2="235" y2="100" stroke="#333" marker-end="url(#arrow)"/>
+  <line x1="235" y1="120" x2="190" y2="120" stroke="#333" marker-end="url(#arrow)"/>
+  <line x1="385" y1="100" x2="430" y2="100" stroke="#333" marker-end="url(#arrow)"/>
+  <line x1="430" y1="120" x2="385" y2="120" stroke="#333" marker-end="url(#arrow)"/>
+</svg>
