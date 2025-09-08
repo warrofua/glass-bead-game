@@ -8,15 +8,12 @@ import {
   GameState,
   Player,
   Bead,
-  Edge,
   Move,
-  JudgmentScroll,
-  JudgedScores,
   validateMove,
+  applyMoveWithResources,
   sanitizeMarkdown,
 } from "@gbg/types";
-import { evaluateResilience } from "./judge/resilience";
-
+import judge from "./judge/index.js";
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
 
@@ -61,44 +58,13 @@ function logMetrics(matchId: string, move: Move, state: GameState){
   });
 }
 
-// --- Judging Stub (deterministic-ish placeholder)
-function judge(state: GameState): JudgmentScroll {
-  const base: Record<string, Omit<JudgedScores, "resilience" | "total">> = {};
-  for(const p of state.players){
-    const beadCount = Object.values<Bead>(state.beads).filter(b=>b.ownerId===p.id).length;
-    const edgeCount = Object.values<Edge>(state.edges).filter(e=> {
-      const owns = state.beads[e.from]?.ownerId === p.id || state.beads[e.to]?.ownerId === p.id;
-      return owns;
-    }).length;
-    const resonance = Math.min(1, (edgeCount / Math.max(1, beadCount)) * 0.6 + 0.2);
-    const aesthetics = Math.min(1, beadCount>0 ? 0.3 + 0.05*beadCount : 0.2);
-    const novelty = 0.4 + 0.1*Math.tanh(beadCount/4);
-    const integrity = 0.5 + 0.1*Math.tanh(edgeCount/5);
-    base[p.id] = { resonance, aesthetics, novelty, integrity };
-  }
-  const res = evaluateResilience(state);
-  const scores: Record<string, JudgedScores> = {};
-  for(const p of state.players){
-    const { resonance, aesthetics, novelty, integrity } = base[p.id];
-    const resilience = res.scores[p.id] ?? 1;
-    const total = 0.30*resonance + 0.20*novelty + 0.20*integrity + 0.20*aesthetics + 0.10*resilience;
-    scores[p.id] = { resonance, aesthetics, novelty, integrity, resilience, total };
-  }
-  const winner = Object.entries(scores).sort((a,b)=>b[1].total - a[1].total)[0]?.[0];
-  return {
-    winner,
-    scores,
-    strongPaths: [],
-    weakSpots: res.weakSpots,
-    missedFuse: undefined
-  };
-}
+// --- Judging pipeline imported from ./judge
 
 // --- REST Endpoints
 fastify.post("/match", async (req, reply) => {
   const id = randomUUID().slice(0,8);
   const state: GameState = {
-    id, round: 1, phase:"SeedDraw", players: [], seeds: sampleSeeds(),
+    id, round: 1, phase:"SeedDraw", players: [], currentPlayerId: undefined, seeds: sampleSeeds(),
     beads: {}, edges: {}, moves: [], createdAt: now(), updatedAt: now()
   };
   matches.set(id, state);
@@ -117,6 +83,9 @@ fastify.post<{ Params: { id: string } }>("/match/:id/join", async (req, reply) =
     resources: { insight: 5, restraint: 2, wildAvailable: true }
   };
   state.players.push(player);
+  if(!state.currentPlayerId){
+    state.currentPlayerId = player.id;
+  }
   state.updatedAt = now();
   broadcast(id, "state:update", state);
   return reply.send(player);
@@ -157,28 +126,18 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
       move.payload.justification = sanitizeMarkdown(move.payload.justification);
     }
   }
-  if(!validateMove(move, state)){
-    return reply.code(400).send({ error: "Invalid move" });
+  const validation = validateMove(move, state);
+  if(!validation.ok){
+    return reply.code(400).send({ error: validation.error });
   }
   move.valid = true;
-  state.moves.push(move);
-  // naive apply: allow cast and bind minimal
-  if(move.type === "cast"){
-    const bead = move.payload?.bead as Bead;
-    if(bead && bead.id){
-      state.beads[bead.id] = bead;
-    }
-  } else if (move.type === "bind"){
-    const edge = {
-      id: move.payload?.id || randomUUID().slice(0,6),
-      from: move.payload?.from,
-      to: move.payload?.to,
-      label: move.payload?.label,
-      justification: move.payload?.justification
-    } as Edge;
-    state.edges[edge.id] = edge;
-  }
+  applyMoveWithResources(state, move);
   state.updatedAt = now();
+  const idx = state.players.findIndex(p=>p.id===move.playerId);
+  if(idx>=0 && state.players.length>0){
+    const next = state.players[(idx+1)%state.players.length];
+    state.currentPlayerId = next.id;
+  }
   broadcast(id, "move:accepted", move);
   broadcast(id, "state:update", state);
   logMetrics(id, move, state);

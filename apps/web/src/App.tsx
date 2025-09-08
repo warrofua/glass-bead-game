@@ -26,6 +26,8 @@ export default function App() {
   const [scroll, setScroll] = useState<JudgmentScroll | null>(null);
   const [beadText, setBeadText] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
+  const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
+  const isMyTurn = currentPlayer?.id === playerId;
 
   useEffect(() => { localStorage.setItem("matchId", matchId); }, [matchId]);
   useEffect(() => { localStorage.setItem("handle", handle); }, [handle]);
@@ -175,6 +177,14 @@ export default function App() {
             <button onClick={joinMatch} className="px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Join</button>
           </div>
         </div>
+        {state && (
+          <div className="pt-4">
+            <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Turn</h2>
+            <p className="text-sm mt-1">
+              {currentPlayer?.handle || currentPlayer?.id || ""} {isMyTurn && "(your turn)"}
+            </p>
+          </div>
+        )}
         <div className="pt-4">
           <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Seeds</h2>
           <ul className="text-sm mt-2 space-y-1">
@@ -193,13 +203,13 @@ export default function App() {
           />
           <button
             onClick={castBead}
-            disabled={!beadText.trim()}
+            disabled={!beadText.trim() || !isMyTurn}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cast Bead
           </button>
-          <button onClick={bindFirstTwo} className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500">Bind First Two</button>
-          <button onClick={requestJudgment} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500">Request Judgment</button>
+          <button onClick={bindFirstTwo} disabled={!isMyTurn} className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Bind First Two</button>
+          <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
           <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>
         </div>
         <p className="text-xs text-[var(--muted)] pt-4">MVP: cast text beads, bind, get a stub judgment.</p>
