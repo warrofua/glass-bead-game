@@ -19,7 +19,7 @@ function startServer(port: number){
 test('cast rejects when insight and wild exhausted', async (t) => {
   const port = 9997;
   const server = startServer(port);
-  await new Promise(r => setTimeout(r, 500));
+  await new Promise(r => setTimeout(r, 1000));
   t.after(() => server.kill());
   const base = `http://localhost:${port}`;
 
@@ -83,7 +83,7 @@ test('cast rejects when insight and wild exhausted', async (t) => {
 test('bind uses restraint then wild then rejects', async (t) => {
   const port = 9996;
   const server = startServer(port);
-  await new Promise(r => setTimeout(r, 500));
+  await new Promise(r => setTimeout(r, 1000));
   t.after(() => server.kill());
   const base = `http://localhost:${port}`;
 
