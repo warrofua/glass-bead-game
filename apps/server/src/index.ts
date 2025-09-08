@@ -15,6 +15,12 @@ import {
   validateMove,
   sanitizeMarkdown,
 } from "@gbg/types";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const { scoreNovelty } = require("../../judge/novelty.js") as {
+  scoreNovelty: (state: GameState) => Record<string, number>;
+};
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -62,6 +68,7 @@ function logMetrics(matchId: string, move: Move, state: GameState){
 
 // --- Judging Stub (deterministic-ish placeholder)
 function judge(state: GameState): JudgmentScroll {
+  const noveltyScores = scoreNovelty(state);
   const scores: Record<string, JudgedScores> = {};
   for(const p of state.players){
     const beadCount = Object.values(state.beads).filter(b=>b.ownerId===p.id).length;
@@ -71,7 +78,7 @@ function judge(state: GameState): JudgmentScroll {
     }).length;
     const resonance = Math.min(1, (edgeCount / Math.max(1, beadCount)) * 0.6 + 0.2);
     const aesthetics = Math.min(1, beadCount>0 ? 0.3 + 0.05*beadCount : 0.2);
-    const novelty = 0.4 + 0.1*Math.tanh(beadCount/4);
+    const novelty = noveltyScores[p.id] ?? 0;
     const integrity = 0.5 + 0.1*Math.tanh(edgeCount/5);
     const resilience = 0.5; // constant for stub
     const total = 0.30*resonance + 0.20*novelty + 0.20*integrity + 0.20*aesthetics + 0.10*resilience;
