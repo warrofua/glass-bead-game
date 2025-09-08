@@ -3,7 +3,7 @@
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev": "npm-run-all -p dev:*",
+    "dev": "npm-run-all build:types --parallel dev:types dev:web dev:server",
     "dev:web": "npm --workspace apps/web run dev",
     "dev:server": "npm --workspace apps/server run dev",
     "dev:types": "npm --workspace packages/types run dev",
