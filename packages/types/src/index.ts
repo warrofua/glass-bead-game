@@ -66,15 +66,25 @@ export function validateMove(move: Move, state: GameState): boolean {
     if (!bead) return false;
     if (bead.modality !== "text") return false;
     if (typeof bead.content !== "string" || bead.content.trim().length === 0) return false;
-    if (bead.content.length > 280) return false;
+    if (bead.content.length > 10_000) return false;
+    if (typeof bead.complexity !== "number" || bead.complexity < 1 || bead.complexity > 5) return false;
+    if (typeof bead.title === "string" && bead.title.length > 80) return false;
+    if (bead.seedId && !state.seeds.find((s) => s.id === bead.seedId)) return false;
     return true;
   }
 
   if (move.type === "bind") {
-    const { from, to, label } = move.payload ?? {};
+    const { from, to, label, justification } = move.payload ?? {};
     if (!from || !to || from === to) return false;
     if (!state.beads[from] || !state.beads[to]) return false;
-    if (!label) return false;
+    if (label !== "analogy") return false;
+    if (typeof justification !== "string" || justification.trim().length === 0)
+      return false;
+    const sentences = justification
+      .split(/[.!?]/)
+      .map((s: string) => s.trim())
+      .filter((s: string) => s.length > 0);
+    if (sentences.length < 2) return false;
     return true;
   }
 
