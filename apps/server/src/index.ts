@@ -15,6 +15,7 @@ import {
   validateMove,
   sanitizeMarkdown,
 } from "@gbg/types";
+import { evaluateResilience } from "./judge/resilience";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -62,10 +63,10 @@ function logMetrics(matchId: string, move: Move, state: GameState){
 
 // --- Judging Stub (deterministic-ish placeholder)
 function judge(state: GameState): JudgmentScroll {
-  const scores: Record<string, JudgedScores> = {};
+  const base: Record<string, Omit<JudgedScores, "resilience" | "total">> = {};
   for(const p of state.players){
-    const beadCount = Object.values(state.beads).filter(b=>b.ownerId===p.id).length;
-    const edgeCount = Object.values(state.edges).filter(e=> {
+    const beadCount = Object.values<Bead>(state.beads).filter(b=>b.ownerId===p.id).length;
+    const edgeCount = Object.values<Edge>(state.edges).filter(e=> {
       const owns = state.beads[e.from]?.ownerId === p.id || state.beads[e.to]?.ownerId === p.id;
       return owns;
     }).length;
@@ -73,7 +74,13 @@ function judge(state: GameState): JudgmentScroll {
     const aesthetics = Math.min(1, beadCount>0 ? 0.3 + 0.05*beadCount : 0.2);
     const novelty = 0.4 + 0.1*Math.tanh(beadCount/4);
     const integrity = 0.5 + 0.1*Math.tanh(edgeCount/5);
-    const resilience = 0.5; // constant for stub
+    base[p.id] = { resonance, aesthetics, novelty, integrity };
+  }
+  const res = evaluateResilience(state);
+  const scores: Record<string, JudgedScores> = {};
+  for(const p of state.players){
+    const { resonance, aesthetics, novelty, integrity } = base[p.id];
+    const resilience = res.scores[p.id] ?? 1;
     const total = 0.30*resonance + 0.20*novelty + 0.20*integrity + 0.20*aesthetics + 0.10*resilience;
     scores[p.id] = { resonance, aesthetics, novelty, integrity, resilience, total };
   }
@@ -82,7 +89,7 @@ function judge(state: GameState): JudgmentScroll {
     winner,
     scores,
     strongPaths: [],
-    weakSpots: [],
+    weakSpots: res.weakSpots,
     missedFuse: undefined
   };
 }
