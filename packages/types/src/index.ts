@@ -117,15 +117,9 @@ export function validateMove(move: Move, state: GameState): boolean {
   if (!move || !state) return false;
 
   const twist = state.twist?.effect;
-  if (twist) {
-    if (twist.modalityLock && move.type === "cast") {
-      const bead = move.payload?.bead as Bead | undefined;
-      if (!bead || !twist.modalityLock.includes(bead.modality)) return false;
-    }
-    if (twist.requiredRelation && move.type === "bind") {
-      const { label } = move.payload ?? {};
-      if (label !== twist.requiredRelation) return false;
-    }
+  if (twist?.modalityLock && move.type === "cast") {
+    const bead = move.payload?.bead as Bead | undefined;
+    if (!bead || !twist.modalityLock.includes(bead.modality)) return false;
   }
 
   if (move.type === "cast") {
@@ -150,7 +144,8 @@ export function validateMove(move: Move, state: GameState): boolean {
     const { from, to, label, justification } = move.payload ?? {};
     if (!from || !to || from === to) return false;
     if (!state.beads[from] || !state.beads[to]) return false;
-    if (label !== "analogy") return false;
+    const expectedLabel = twist?.requiredRelation ?? "analogy";
+    if (label !== expectedLabel) return false;
     if (typeof justification !== "string" || justification.trim().length === 0)
       return false;
     const cleanJust = sanitizeMarkdown(justification);

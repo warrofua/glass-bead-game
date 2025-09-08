@@ -58,6 +58,27 @@ test('bind respects required relation from twist', () => {
   assert.equal(validateMove(move, state), false);
 });
 
+test('bind satisfies required relation from twist', () => {
+  const state: GameState = {
+    ...baseState,
+    beads: {
+      a: { id: 'a', ownerId: 'p1', modality: 'text', content: 'A', complexity: 1, createdAt: 0 },
+      b: { id: 'b', ownerId: 'p2', modality: 'text', content: 'B', complexity: 1, createdAt: 0 },
+    },
+    twist: { id: 't', name: 'causality only', description: '', effect: { requiredRelation: 'causality' } },
+  };
+  const move: Move = {
+    id: 'm2',
+    playerId: 'p1',
+    type: 'bind',
+    payload: { from: 'a', to: 'b', label: 'causality', justification: 'First. Second.' },
+    timestamp: 1,
+    durationMs: 0,
+    valid: true,
+  };
+  assert.equal(validateMove(move, state), true);
+});
+
 test('counterpoint references opponent bead', () => {
   const state: GameState = {
     ...baseState,
