@@ -8,16 +8,16 @@ This plan derives from the MVP and Beta requirements in [`prd.md`](../prd.md). I
 - Implement REST endpoints for match lifecycle: `POST /match`, `POST /match/:id/join`, `GET /match/:id`, `POST /match/:id/move`, `POST /match/:id/judge`.
 - Maintain in-memory `matches` store and broadcast state changes via WebSocket `state:update`.
 - Validate Cast and Bind moves: enforce text bead constraints, reject invalid edges, ensure deterministic judge stub.
-- Provide JSON match log export.
+- Provide JSON match log export. *(completed)*
 
 ### apps/web
 - Create React flows for creating/joining a match, listing seeds, and submitting Cast and Bind moves.
-- Show real-time updates from WebSocket and render Judgment Scroll with per-axis scores.
+- Show real-time updates from WebSocket and render Judgment Scroll with per-axis scores. *(completed)*
 - Allow players to export the match log from the UI.
 
 ### packages/types
 - Define TypeScript types for `Player`, `Seed`, `Bead`, `Edge`, `Move`, `GameState`, and `JudgmentScroll`.
-- Share validation utilities for move rules and seed constraints.
+- Share validation utilities for move rules and seed constraints. *(completed)*
 
 ## Phase 2 – Beta Preview
 
