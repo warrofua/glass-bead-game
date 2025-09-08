@@ -14,6 +14,7 @@ import {
   sanitizeMarkdown,
 } from "@gbg/types";
 import judge from "./judge/index.js";
+import { recordMove, recordWsFailure, getMetrics } from "./metrics.js";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -21,7 +22,6 @@ await fastify.register(cors, { origin: true });
 // In-memory store
 const matches = new Map<string, GameState>();
 const sockets = new Map<string, Set<WebSocket>>();
-const metrics = { wsSendFailures: 0, totalMoves: 0 };
 
 // --- Utility
 function now(){ return Date.now(); }
@@ -40,23 +40,10 @@ function broadcast(matchId: string, type: string, payload: any){
     try{
       ws.send(msg);
     }catch(err){
-      metrics.wsSendFailures++;
-      console.warn('WS send failed', err, { wsSendFailures: metrics.wsSendFailures });
+      recordWsFailure();
+      console.warn('WS send failed', err, getMetrics());
     }
   }
-}
-
-function logMetrics(matchId: string, move: Move, state: GameState){
-  const latency = Date.now() - move.timestamp;
-  metrics.totalMoves++;
-  console.log("[metrics]", {
-    matchId,
-    latency,
-    moves: state.moves.length,
-    beads: Object.keys(state.beads).length,
-    edges: Object.keys(state.edges).length,
-    totalMoves: metrics.totalMoves
-  });
 }
 
 // --- Judging pipeline imported from ./judge
@@ -141,7 +128,8 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
   }
   broadcast(id, "move:accepted", move);
   broadcast(id, "state:update", state);
-  logMetrics(id, move, state);
+  const latency = Date.now() - move.timestamp;
+  recordMove(id, latency, state);
   return reply.send({ ok: true });
 });
 
