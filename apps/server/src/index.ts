@@ -1,20 +1,13 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-import { randomUUID } from "node:crypto";
 import type { IncomingMessage } from "http";
 import type { Socket } from "net";
 import WebSocket, { WebSocketServer } from "ws";
-import {
-  GameState,
-  Player,
-  Bead,
-  Edge,
-  Move,
-  JudgmentScroll,
-  JudgedScores,
-  validateMove,
-  sanitizeMarkdown,
-} from "@gbg/types";
+import { GameState, Move, JudgmentScroll, JudgedScores } from "@gbg/types";
+import { registerMatchRoutes } from "./routes/match.js";
+import { registerJoinRoute } from "./routes/join.js";
+import { registerMoveRoute } from "./routes/move.js";
+import { registerJudgeRoute } from "./routes/judge.js";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -45,6 +38,21 @@ function broadcast(matchId: string, type: string, payload: any){
       console.warn('WS send failed', err, { wsSendFailures: metrics.wsSendFailures });
     }
   }
+}
+
+function scheduleUpdate(matchId: string, state: GameState, move?: Move){
+  const start = now();
+  let sent = false;
+  const send = () => {
+    if(sent) return;
+    sent = true;
+    if(move) broadcast(matchId, "move:accepted", move);
+    broadcast(matchId, "state:update", state);
+    const latency = now() - start;
+    console.log("[latency]", { matchId, latency });
+  };
+  setImmediate(send);
+  setTimeout(send, 150);
 }
 
 function logMetrics(matchId: string, move: Move, state: GameState){
@@ -88,104 +96,18 @@ function judge(state: GameState): JudgmentScroll {
 }
 
 // --- REST Endpoints
-fastify.post("/match", async (req, reply) => {
-  const id = randomUUID().slice(0,8);
-  const state: GameState = {
-    id, round: 1, phase:"SeedDraw", players: [], seeds: sampleSeeds(),
-    beads: {}, edges: {}, moves: [], createdAt: now(), updatedAt: now()
-  };
-  matches.set(id, state);
-  return reply.send(state);
-});
-
-fastify.post<{ Params: { id: string } }>("/match/:id/join", async (req, reply) => {
-  const id = req.params.id;
-  const { handle } = (req.body as any) ?? {};
-  const state = matches.get(id);
-  if(!state) return reply.code(404).send({ error: "No such match" });
-  if(state.players.length >= 2) return reply.code(400).send({ error: "Match full" });
-  const player: Player = {
-    id: randomUUID().slice(0,6),
-    handle: sanitizeMarkdown(handle || "Player"+(state.players.length+1)),
-    resources: { insight: 5, restraint: 2, wildAvailable: true }
-  };
-  state.players.push(player);
-  state.updatedAt = now();
-  broadcast(id, "state:update", state);
-  return reply.send(player);
-});
-
-fastify.get<{ Params: { id: string } }>("/match/:id", async (req, reply) => {
-  const state = matches.get(req.params.id);
-  if(!state) return reply.code(404).send({ error: "No such match" });
-  return reply.send(state);
-});
-
-fastify.get<{ Params: { id: string } }>("/match/:id/log", async (req, reply) => {
-  const state = matches.get(req.params.id);
-  if(!state) return reply.code(404).send({ error: "No such match" });
-  reply
-    .header("Content-Type", "application/json")
-    .header("Content-Disposition", `attachment; filename=match-${state.id}.json`);
-  return reply.send(state);
-});
-
-fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) => {
-  const id = req.params.id;
-  const state = matches.get(id);
-  if(!state) return reply.code(404).send({ error: "No such match" });
-
-  const move = (req.body as any) as Move;
-  // sanitize text fields
-  if(move.type === "cast"){
-    const bead = move.payload?.bead as Bead;
-    if(bead){
-      bead.content = sanitizeMarkdown(bead.content);
-      if(typeof bead.title === "string"){
-        bead.title = sanitizeMarkdown(bead.title);
-      }
-    }
-  } else if(move.type === "bind"){
-    if(typeof move.payload?.justification === "string"){
-      move.payload.justification = sanitizeMarkdown(move.payload.justification);
-    }
-  }
-  if(!validateMove(move, state)){
-    return reply.code(400).send({ error: "Invalid move" });
-  }
-  move.valid = true;
-  state.moves.push(move);
-  // naive apply: allow cast and bind minimal
-  if(move.type === "cast"){
-    const bead = move.payload?.bead as Bead;
-    if(bead && bead.id){
-      state.beads[bead.id] = bead;
-    }
-  } else if (move.type === "bind"){
-    const edge = {
-      id: move.payload?.id || randomUUID().slice(0,6),
-      from: move.payload?.from,
-      to: move.payload?.to,
-      label: move.payload?.label,
-      justification: move.payload?.justification
-    } as Edge;
-    state.edges[edge.id] = edge;
-  }
-  state.updatedAt = now();
-  broadcast(id, "move:accepted", move);
-  broadcast(id, "state:update", state);
-  logMetrics(id, move, state);
-  return reply.send({ ok: true });
-});
-
-fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) => {
-  const id = req.params.id;
-  const state = matches.get(id);
-  if(!state) return reply.code(404).send({ error: "No such match" });
-  const scroll = judge(state);
-  broadcast(id, "end:judgment", scroll);
-  return reply.send(scroll);
-});
+registerMatchRoutes(fastify, matches, sampleSeeds, now);
+registerJoinRoute(fastify, matches, (id, state) => scheduleUpdate(id, state), now);
+registerMoveRoute(
+  fastify,
+  matches,
+  (id, state, move) => {
+    scheduleUpdate(id, state, move);
+    logMetrics(id, move, state);
+  },
+  now
+);
+registerJudgeRoute(fastify, matches, judge, broadcast);
 
 // --- WebSocket (per match)
 const server = fastify.server;
@@ -202,6 +124,14 @@ server.on("upgrade", (req: IncomingMessage, socket: Socket, head: Buffer) => {
     if(!set){ set = new Set(); sockets.set(matchId, set); }
     set.add(ws);
     ws.on("close", () => { set?.delete(ws); });
+    ws.on("message", (data: WebSocket.RawData) => {
+      try{
+        const msg = JSON.parse(data.toString());
+        if(msg.type === "hello"){
+          ws.send(JSON.stringify({ type: "state:update", payload: matches.get(matchId) }));
+        }
+      }catch{}
+    });
     ws.send(JSON.stringify({ type: "state:update", payload: matches.get(matchId) }));
   });
 });
