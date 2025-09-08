@@ -6,12 +6,15 @@
     "dev": "npm-run-all -p dev:*",
     "dev:web": "npm --workspace apps/web run dev",
     "dev:server": "npm --workspace apps/server run dev",
+    "dev:types": "npm --workspace packages/types run dev",
     "build": "npm-run-all -p build:*",
     "build:web": "npm --workspace apps/web run build",
     "build:server": "npm --workspace apps/server run build",
-    "typecheck": "npm-run-all -p typecheck:*",
+    "build:types": "npm --workspace packages/types run build",
+    "typecheck": "npm-run-all typecheck:types typecheck:web typecheck:server",
     "typecheck:web": "npm --workspace apps/web run typecheck",
-    "typecheck:server": "npm --workspace apps/server run typecheck"
+    "typecheck:server": "npm --workspace apps/server run typecheck",
+    "typecheck:types": "npm --workspace packages/types run build"
   },
   "devDependencies": {
     "npm-run-all": "^4.1.5"
