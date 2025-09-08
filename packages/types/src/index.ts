@@ -1,3 +1,5 @@
+import sanitizeHtml from "sanitize-html";
+
 export type Modality = "text" | "image" | "audio" | "math" | "code" | "data";
 export type RelationLabel =
   | "analogy" | "isomorphism" | "duality" | "causality" | "symmetry" | "inverse"
@@ -47,11 +49,53 @@ export interface JudgmentScroll {
   missedFuse?: string;
 }
 
+// --- Sanitization helper ---
+const MD_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: [
+    "b",
+    "i",
+    "em",
+    "strong",
+    "a",
+    "p",
+    "ul",
+    "ol",
+    "li",
+    "code",
+    "pre",
+    "blockquote",
+    "img",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
+    "br",
+  ],
+  allowedAttributes: {
+    a: ["href", "title"],
+    img: ["src", "alt", "title"],
+  },
+  allowedSchemes: ["http", "https", "mailto"],
+  allowedSchemesByTag: {
+    img: ["http", "https", "data"],
+  },
+};
+
+export function sanitizeMarkdown(md: string): string {
+  return sanitizeHtml(md, MD_SANITIZE_OPTIONS);
+}
+
 // --- Validation helpers ---
 
-/** Validate that a seed has non-empty text and domain. */
+/** Validate that a seed has non-empty text and domain and sanitize text fields. */
 export function validateSeed(seed: Seed): boolean {
-  return !!seed && !!seed.id && seed.text.trim().length > 0 && seed.domain.trim().length > 0;
+  if (!seed || !seed.id) return false;
+  seed.text = sanitizeMarkdown(seed.text ?? "");
+  seed.domain = sanitizeMarkdown(seed.domain ?? "");
+  return seed.text.trim().length > 0 && seed.domain.trim().length > 0;
 }
 
 /**
@@ -66,9 +110,13 @@ export function validateMove(move: Move, state: GameState): boolean {
     if (!bead) return false;
     if (bead.modality !== "text") return false;
     if (typeof bead.content !== "string" || bead.content.trim().length === 0) return false;
+    bead.content = sanitizeMarkdown(bead.content);
     if (bead.content.length > 10_000) return false;
     if (typeof bead.complexity !== "number" || bead.complexity < 1 || bead.complexity > 5) return false;
-    if (typeof bead.title === "string" && bead.title.length > 80) return false;
+    if (typeof bead.title === "string") {
+      bead.title = sanitizeMarkdown(bead.title);
+      if (bead.title.length > 80) return false;
+    }
     if (bead.seedId && !state.seeds.find((s) => s.id === bead.seedId)) return false;
     return true;
   }
@@ -80,7 +128,9 @@ export function validateMove(move: Move, state: GameState): boolean {
     if (label !== "analogy") return false;
     if (typeof justification !== "string" || justification.trim().length === 0)
       return false;
-    const sentences = justification
+    const cleanJust = sanitizeMarkdown(justification);
+    move.payload.justification = cleanJust;
+    const sentences = cleanJust
       .split(/[.!?]/)
       .map((s: string) => s.trim())
       .filter((s: string) => s.length > 0);
