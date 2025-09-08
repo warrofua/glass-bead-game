@@ -4,7 +4,9 @@
     "baseUrl": ".",
     "paths": {
       "@gbg/types": ["../../packages/types/src"]
-    }
+    },
+    "jsx": "react-jsx",
+    "moduleResolution": "bundler"
   },
   "include": ["src", "vite-env.d.ts"]
 }
