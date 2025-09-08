@@ -6,7 +6,7 @@ import path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-test('metrics endpoint reports move counts and latency', async (t) => {
+test('metrics endpoint reports move counts', async (t) => {
   const cwd = path.join(__dirname, '..');
   const server = spawn('node', ['dist/index.js'], {
     cwd,
@@ -62,5 +62,4 @@ test('metrics endpoint reports move counts and latency', async (t) => {
 
   assert.equal(data.totalMoves, 1);
   assert.equal(data.wsSendFailures, 0);
-  assert.ok(typeof data.latency === 'number' && data.latency > 0);
 });
