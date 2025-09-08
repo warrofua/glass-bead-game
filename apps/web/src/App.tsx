@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import type { GameState, Bead, Move } from "@gbg/types";
+import React, { useEffect, useRef, useState } from "react";
+import type { GameState, Bead, Move, JudgmentScroll } from "@gbg/types";
 
 type WsMsg = { type: string; payload: any };
 
@@ -11,6 +11,7 @@ export default function App() {
   const [handle, setHandle] = useState<string>(() => localStorage.getItem("handle") || "");
   const [playerId, setPlayerId] = useState<string>("");
   const [state, setState] = useState<GameState | null>(null);
+  const [scroll, setScroll] = useState<JudgmentScroll | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => { localStorage.setItem("matchId", matchId); }, [matchId]);
@@ -90,8 +91,20 @@ export default function App() {
   const requestJudgment = async () => {
     if (!state) return;
     const res = await api(`/match/${state.id}/judge`, { method: "POST" });
-    const scroll = await res.json();
-    alert(`Winner: ${scroll.winner}\nScores: ${JSON.stringify(scroll.scores, null, 2)}`);
+    const data = (await res.json()) as JudgmentScroll;
+    setScroll(data);
+  };
+
+  const exportLog = async () => {
+    if (!state) return;
+    const res = await api(`/match/${state.id}/log`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `match-${state.id}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -118,6 +131,7 @@ export default function App() {
           <button onClick={castBead} className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500">Cast Bead</button>
           <button onClick={bindFirstTwo} className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500">Bind First Two</button>
           <button onClick={requestJudgment} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500">Request Judgment</button>
+          <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>
         </div>
         <p className="text-xs text-[var(--muted)] pt-4">MVP: cast text beads, bind, get a stub judgment.</p>
       </aside>
@@ -130,7 +144,7 @@ export default function App() {
             <section>
               <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Beads</h3>
               <ul className="mt-2 space-y-2">
-                {Object.values(state.beads).map(b => (
+                {Object.values(state.beads).map((b) => (
                   <li key={b.id} className="p-3 rounded bg-zinc-900">
                     <div className="text-sm font-semibold">{b.title || b.id}</div>
                     <div className="text-xs opacity-70">{b.modality} · by {b.ownerId}</div>
@@ -142,15 +156,32 @@ export default function App() {
             <section>
               <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Strings</h3>
               <ul className="mt-2 space-y-2">
-                {Object.values(state.edges).map(e => (
+                {Object.values(state.edges).map((e) => (
                   <li key={e.id} className="p-3 rounded bg-zinc-900 text-xs">
-                    <div className="opacity-80"><b>{e.label}</b>: {e.from} → {e.to}</div>
+                    <div className="opacity-80">
+                      <b>{e.label}</b>: {e.from} → {e.to}
+                    </div>
                     <div className="opacity-60 mt-1">{e.justification}</div>
                   </li>
                 ))}
               </ul>
             </section>
           </div>
+        )}
+        {scroll && (
+          <section className="mt-6">
+            <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Judgment</h3>
+            <div className="mt-2 text-sm">
+              <div className="mb-2">Winner: {scroll.winner || "TBD"}</div>
+              <ul className="space-y-1">
+                {Object.entries(scroll.scores).map(([pid, s]) => (
+                  <li key={pid} className="text-xs">
+                    <b>{pid}</b>: {(s.total * 100).toFixed(1)}% (res {s.resonance.toFixed(2)}, nov {s.novelty.toFixed(2)}, int {s.integrity.toFixed(2)})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
         )}
       </main>
     </div>

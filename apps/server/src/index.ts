@@ -1,10 +1,19 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { randomUUID } from "node:crypto";
-import { WebSocketServer } from "ws";
+import type { IncomingMessage } from "http";
+import type { Socket } from "net";
+import WebSocket, { WebSocketServer } from "ws";
 import { setTimeout as sleep } from "node:timers/promises";
 import {
-  GameState, Player, Bead, Edge, Move, JudgmentScroll, JudgedScores
+  GameState,
+  Player,
+  Bead,
+  Edge,
+  Move,
+  JudgmentScroll,
+  JudgedScores,
+  validateMove
 } from "@gbg/types";
 
 const fastify = Fastify({ logger: false });
@@ -91,13 +100,25 @@ fastify.get<{ Params: { id: string } }>("/match/:id", async (req, reply) => {
   return reply.send(state);
 });
 
+fastify.get<{ Params: { id: string } }>("/match/:id/log", async (req, reply) => {
+  const state = matches.get(req.params.id);
+  if(!state) return reply.code(404).send({ error: "No such match" });
+  reply
+    .header("Content-Type", "application/json")
+    .header("Content-Disposition", `attachment; filename=match-${state.id}.json`);
+  return reply.send(state);
+});
+
 fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) => {
   const id = req.params.id;
   const state = matches.get(id);
   if(!state) return reply.code(404).send({ error: "No such match" });
 
   const move = (req.body as any) as Move;
-  move.valid = true; // TODO: validate against schema / costs
+  if(!validateMove(move, state)){
+    return reply.code(400).send({ error: "Invalid move" });
+  }
+  move.valid = true;
   state.moves.push(move);
   // naive apply: allow cast and bind minimal
   if(move.type === "cast"){
@@ -133,14 +154,14 @@ fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) 
 // --- WebSocket (per match)
 const server = fastify.server;
 const wss = new WebSocketServer({ noServer: true });
-server.on("upgrade", (req, socket, head) => {
+server.on("upgrade", (req: IncomingMessage, socket: Socket, head: Buffer) => {
   const url = new URL(req.url ?? "", "http://localhost");
   const matchId = url.searchParams.get("matchId") ?? "";
   if(!matchId || !matches.has(matchId)){
     socket.destroy();
     return;
   }
-  wss.handleUpgrade(req, socket, head, (ws) => {
+  wss.handleUpgrade(req, socket, head, (ws: WebSocket) => {
     let set = sockets.get(matchId);
     if(!set){ set = new Set(); sockets.set(matchId, set); }
     set.add(ws);
