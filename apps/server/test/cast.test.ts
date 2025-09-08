@@ -38,7 +38,7 @@ test('cast move broadcasts new bead to all players', async (t) => {
     server.kill();
   });
 
-  const base = 'http://localhost:9999';
+  const base = 'http://127.0.0.1:9999';
 
   // create match
   const matchRes = await fetch(`${base}/match`, { method: 'POST' });
@@ -57,8 +57,8 @@ test('cast move broadcasts new bead to all players', async (t) => {
   await join('B');
 
   // open websockets for both players
-  const ws1 = new WebSocket(`ws://localhost:9999/?matchId=${matchId}`);
-  const ws2 = new WebSocket(`ws://localhost:9999/?matchId=${matchId}`);
+  const ws1 = new WebSocket(`ws://127.0.0.1:9999/?matchId=${matchId}`);
+  const ws2 = new WebSocket(`ws://127.0.0.1:9999/?matchId=${matchId}`);
   const initial1 = waitForMessage(ws1, 'state:update');
   const initial2 = waitForMessage(ws2, 'state:update');
   await Promise.all([

@@ -33,6 +33,6 @@ echo ""
 # Step 4: Start development server
 echo "🎮 Starting development server..."
 echo "   - Web app will be available at http://localhost:5173"
-echo "   - Server will be available at http://localhost:3000"
+echo "   - Server will be available at http://localhost:8787"
 echo ""
 npm run dev

@@ -18,7 +18,7 @@ test('players can join a match and be listed in state', async (t) => {
     server.kill();
   });
 
-  const base = 'http://localhost:9998';
+  const base = 'http://127.0.0.1:9998';
 
   const matchRes = await fetch(`${base}/match`, { method: 'POST' });
   const match = await matchRes.json();
