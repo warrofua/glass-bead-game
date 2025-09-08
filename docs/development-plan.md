@@ -13,7 +13,7 @@ This plan derives from the MVP and Beta requirements in [`prd.md`](../prd.md). I
 ### apps/web
 - Create React flows for creating/joining a match, listing seeds, and submitting Cast and Bind moves.
 - Show real-time updates from WebSocket and render Judgment Scroll with per-axis scores. *(completed)*
-- Allow players to export the match log from the UI.
+- Allow players to export the match log from the UI. *(completed)*
 
 ### packages/types
 - Define TypeScript types for `Player`, `Seed`, `Bead`, `Edge`, `Move`, `GameState`, and `JudgmentScroll`.
@@ -31,7 +31,7 @@ This plan derives from the MVP and Beta requirements in [`prd.md`](../prd.md). I
 - Replace stub judge with embedding-based resonance, NLI integrity checks, and novelty scoring.
 
 ## Cross-cutting Concerns
-- Instrument console metrics for latency and move counts.
-- Sanitize markdown inputs and enforce length caps for safety.
+- Instrument console metrics for latency and move counts. *(completed)*
+- Sanitize markdown inputs and enforce length caps for safety. *(completed)*
 - Document every module with README snippets and update this plan as scope evolves.
 
