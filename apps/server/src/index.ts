@@ -8,11 +8,11 @@ import {
   GameState,
   Player,
   Bead,
-  Edge,
   Move,
   JudgmentScroll,
   JudgedScores,
   validateMove,
+  applyMoveWithResources,
   sanitizeMarkdown,
 } from "@gbg/types";
 
@@ -150,27 +150,12 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
       move.payload.justification = sanitizeMarkdown(move.payload.justification);
     }
   }
-  if(!validateMove(move, state)){
-    return reply.code(400).send({ error: "Invalid move" });
+  const validation = validateMove(move, state);
+  if(!validation.ok){
+    return reply.code(400).send({ error: validation.error });
   }
   move.valid = true;
-  state.moves.push(move);
-  // naive apply: allow cast and bind minimal
-  if(move.type === "cast"){
-    const bead = move.payload?.bead as Bead;
-    if(bead && bead.id){
-      state.beads[bead.id] = bead;
-    }
-  } else if (move.type === "bind"){
-    const edge = {
-      id: move.payload?.id || randomUUID().slice(0,6),
-      from: move.payload?.from,
-      to: move.payload?.to,
-      label: move.payload?.label,
-      justification: move.payload?.justification
-    } as Edge;
-    state.edges[edge.id] = edge;
-  }
+  applyMoveWithResources(state, move);
   state.updatedAt = now();
   broadcast(id, "move:accepted", move);
   broadcast(id, "state:update", state);
