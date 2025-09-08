@@ -22,6 +22,7 @@ await fastify.register(cors, { origin: true });
 // In-memory store
 const matches = new Map<string, GameState>();
 const sockets = new Map<string, Set<WebSocket>>();
+const metrics = { wsSendFailures: 0 };
 
 // --- Utility
 function now(){ return Date.now(); }
@@ -36,7 +37,14 @@ function sampleSeeds(): GameState["seeds"]{
 function broadcast(matchId: string, type: string, payload: any){
   const set = sockets.get(matchId); if(!set) return;
   const msg = JSON.stringify({ type, payload });
-  for(const ws of set){ try{ ws.send(msg); }catch{} }
+  for(const ws of set){
+    try{
+      ws.send(msg);
+    }catch(err){
+      metrics.wsSendFailures++;
+      console.warn('WS send failed', err, { wsSendFailures: metrics.wsSendFailures });
+    }
+  }
 }
 
 // --- Judging Stub (deterministic-ish placeholder)
