@@ -15,10 +15,8 @@ import {
   validateMove,
   sanitizeMarkdown,
 } from "@gbg/types";
-import { createRequire } from "module";
-
-const require = createRequire(import.meta.url);
-const { scoreNovelty } = require("../../judge/novelty.js") as {
+// @ts-ignore - import TypeScript module without build step
+const { scoreNovelty } = await import("../../../judge/novelty.ts") as {
   scoreNovelty: (state: GameState) => Record<string, number>;
 };
 
