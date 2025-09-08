@@ -2,6 +2,14 @@ import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import type { GameState } from "@gbg/types";
 
+interface Node extends d3.SimulationNodeDatum {
+  id: string;
+}
+
+interface Link extends d3.SimulationLinkDatum<Node> {
+  id: string;
+}
+
 export interface GraphViewProps {
   /** Match id to connect to websocket and receive live state */
   matchId?: string;
@@ -44,14 +52,20 @@ export default function GraphView({
   // Render graph using d3 whenever state or selection changes
   useEffect(() => {
     if (!state) return;
-    const nodes: Array<d3.SimulationNodeDatum & { id: string }> = Object.values(
-      state.beads
-    ).map((b) => ({ id: b.id }));
-    const links: Array<d3.SimulationLinkDatum<d3.SimulationNodeDatum> & { id: string }> = Object.values(
-      state.edges
-    ).map((e) => ({ id: e.id, source: e.from, target: e.to }));
+    const nodes: Node[] = Object.values(state.beads).map((b) => ({ id: b.id }));
+    const links: Link[] = Object.values(state.edges).map((e) => ({
+      id: e.id,
+      source: e.from,
+      target: e.to,
+    }));
 
-    const svg = d3.select(svgRef.current) as any;
+    const simulation = d3
+      .forceSimulation<Node>(nodes)
+      .force("link", d3.forceLink<Node, Link>(links).id((d) => d.id))
+      .force("charge", d3.forceManyBody<Node>().strength(-200))
+      .force("center", d3.forceCenter(width / 2, height / 2));
+
+    const svg = d3.select<SVGSVGElement, unknown>(svgRef.current!);
     svg.selectAll("*").remove();
     svg.attr("viewBox", `0 0 ${width} ${height}`);
 
@@ -61,71 +75,60 @@ export default function GraphView({
       .append("g")
       .attr("stroke", "#888")
       .attr("stroke-width", 1.5)
-      .selectAll("line")
+      .selectAll<SVGLineElement, Link>("line")
       .data(links)
       .enter()
       .append("line")
-      .attr("id", (d: any) => d.id);
+      .attr("id", (d) => d.id);
 
     const node = g
       .append("g")
       .attr("stroke", "#fff")
       .attr("stroke-width", 1.5)
-      .selectAll("circle")
+      .selectAll<SVGCircleElement, Node>("circle")
       .data(nodes)
       .enter()
       .append("circle")
       .attr("r", 10)
       .attr("fill", "#4f46e5");
 
-    (node as any).call(
-      d3
-        .drag<SVGCircleElement, d3.SimulationNodeDatum>()
-        .on("start", (event: any, d: any) => {
-          if (!event.active) simulation.alphaTarget(0.3).restart();
-          d.fx = d.x;
-          d.fy = d.y;
-        })
-        .on("drag", (event: any, d: any) => {
-          d.fx = event.x;
-          d.fy = event.y;
-        })
-        .on("end", (event: any, d: any) => {
-          if (!event.active) simulation.alphaTarget(0);
-          d.fx = null;
-          d.fy = null;
-        })
-    );
+    const drag = d3
+      .drag<SVGCircleElement, Node>()
+      .on("start", (event, d) => {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      })
+      .on("drag", (event, d) => {
+        d.fx = event.x;
+        d.fy = event.y;
+      })
+      .on("end", (event, d) => {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      });
 
-    const simulation = d3
-      .forceSimulation(nodes)
-      .force(
-        "link",
-        d3.forceLink(links).id((d: any) => d.id)
-      )
-      .force("charge", d3.forceManyBody().strength(-200))
-      .force("center", d3.forceCenter(width / 2, height / 2));
+    node.call(drag);
 
     simulation.on("tick", () => {
       link
-        .attr("x1", (d: any) => (d.source as any).x)
-        .attr("y1", (d: any) => (d.source as any).y)
-        .attr("x2", (d: any) => (d.target as any).x)
-        .attr("y2", (d: any) => (d.target as any).y);
-      node.attr("cx", (d: any) => d.x).attr("cy", (d: any) => d.y);
+        .attr("x1", (d) => (d.source as Node).x ?? 0)
+        .attr("y1", (d) => (d.source as Node).y ?? 0)
+        .attr("x2", (d) => (d.target as Node).x ?? 0)
+        .attr("y2", (d) => (d.target as Node).y ?? 0);
+      node.attr("cx", (d) => d.x ?? 0).attr("cy", (d) => d.y ?? 0);
     });
 
-    // zoom + pan
-    (svg as any).call(
+    svg.call(
       d3
         .zoom<SVGSVGElement, unknown>()
         .scaleExtent([0.1, 4])
-        .on("zoom", (event: any) => {
-          g.attr("transform", event.transform);
+        .on("zoom", (event) => {
+          g.attr("transform", event.transform.toString());
         })
     );
 
-    // Highlight selected path
     if (strongPaths && selectedPathIndex !== undefined) {
       const path = strongPaths[selectedPathIndex]?.nodes ?? [];
       const nodeSet = new Set(path);
@@ -133,15 +136,15 @@ export default function GraphView({
       for (let i = 0; i < path.length - 1; i++) {
         edgeSet.add(`${path[i]}|${path[i + 1]}`);
       }
-      node.attr("fill", (d: any) => (nodeSet.has(d.id) ? "#ef4444" : "#4f46e5"));
+      const getId = (n: string | number | Node) =>
+        typeof n === "string" || typeof n === "number" ? String(n) : n.id;
+      node.attr("fill", (d) => (nodeSet.has(d.id) ? "#ef4444" : "#4f46e5"));
       link
-        .attr("stroke", (d: any) =>
-          edgeSet.has(`${d.source.id || d.source}|${d.target.id || d.target}`)
-            ? "#ef4444"
-            : "#888"
+        .attr("stroke", (d) =>
+          edgeSet.has(`${getId(d.source)}|${getId(d.target)}`) ? "#ef4444" : "#888"
         )
-        .attr("stroke-width", (d: any) =>
-          edgeSet.has(`${d.source.id || d.source}|${d.target.id || d.target}`) ? 3 : 1.5
+        .attr("stroke-width", (d) =>
+          edgeSet.has(`${getId(d.source)}|${getId(d.target)}`) ? 3 : 1.5
         );
     }
 
