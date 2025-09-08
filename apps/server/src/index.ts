@@ -41,13 +41,14 @@ function broadcast(matchId: string, type: string, payload: any){
 }
 
 function scheduleUpdate(matchId: string, state: GameState, move?: Move){
+  const snapshot = JSON.parse(JSON.stringify(state));
   const start = now();
   let sent = false;
   const send = () => {
     if(sent) return;
     sent = true;
     if(move) broadcast(matchId, "move:accepted", move);
-    broadcast(matchId, "state:update", state);
+    broadcast(matchId, "state:update", snapshot);
     const latency = now() - start;
     console.log("[latency]", { matchId, latency });
   };
