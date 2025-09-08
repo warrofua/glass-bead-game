@@ -36,5 +36,6 @@ This plan derives from the MVP and Beta requirements in [`prd.md`](../prd.md). I
 ## Cross-cutting Concerns
 - Instrument console metrics for latency and move counts. *(completed)*
 - Sanitize markdown inputs and enforce length caps for safety. *(completed)*
+- Harden local setup and connection handling: add dev startup script, guard WebSocket connections, and handle API errors gracefully. *(completed)*
 - Document every module with README snippets and update this plan as scope evolves.
 
