@@ -12,7 +12,8 @@ type BroadcastFn = (id: string, type: string, payload: any) => void;
 export default function registerJoinRoute(
   fastify: FastifyInstance,
   matches: Map<string, GameState>,
-  broadcast: BroadcastFn
+  broadcast: BroadcastFn,
+  now: () => number,
 ){
   fastify.post<{ Params: { id: string } }>("/match/:id/join", async (req, reply) => {
     const id = req.params.id;
@@ -29,7 +30,7 @@ export default function registerJoinRoute(
     if(state.currentPlayerId === undefined){
       state.currentPlayerId = player.id;
     }
-    state.updatedAt = Date.now();
+    state.updatedAt = now();
     broadcast(id, "state:update", state);
     return reply.send(player);
   });

@@ -72,7 +72,7 @@ fastify.post("/match", async (req, reply) => {
   return reply.send(state);
 });
 
-registerJoinRoute(fastify, matches, broadcast);
+registerJoinRoute(fastify, matches, broadcast, now);
 
 fastify.get<{ Params: { id: string } }>("/match/:id", async (req, reply) => {
   const state = matches.get(req.params.id);
