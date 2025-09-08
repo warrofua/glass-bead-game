@@ -3,10 +3,12 @@ import type { GameState } from "@gbg/types";
 export const metrics = {
   wsSendFailures: 0,
   totalMoves: 0,
+  latency: 0,
 };
 
 export function recordMove(matchId: string, latency: number, state: GameState){
   metrics.totalMoves++;
+  metrics.latency = latency;
   console.log("[metrics]", {
     matchId,
     latency,
