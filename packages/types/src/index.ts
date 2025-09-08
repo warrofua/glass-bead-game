@@ -85,7 +85,8 @@ const MD_SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
 };
 
 export function sanitizeMarkdown(md: string): string {
-  return sanitizeHtml(md, MD_SANITIZE_OPTIONS);
+  const clean = sanitizeHtml(md, MD_SANITIZE_OPTIONS);
+  return clean.slice(0, 10_000);
 }
 
 // --- Validation helpers ---
