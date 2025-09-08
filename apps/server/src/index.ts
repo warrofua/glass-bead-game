@@ -40,7 +40,14 @@ function broadcast(matchId: string, type: string, payload: any){
     }catch(err){
       metrics.wsSendFailures++;
       console.warn('WS send failed', err, { wsSendFailures: metrics.wsSendFailures });
+      try{
+        ws.close();
+      }catch{}
+      set.delete(ws);
     }
+  }
+  if(set.size === 0){
+    sockets.delete(matchId);
   }
 }
 
