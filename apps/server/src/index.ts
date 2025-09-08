@@ -7,12 +7,10 @@ import WebSocket, { WebSocketServer } from "ws";
 import {
   GameState,
   Player,
-  Bead,
   Move,
-  validateMove,
-  applyMoveWithResources,
   sanitizeMarkdown,
 } from "@gbg/types";
+import registerMoveRoute from "./routes/move.js";
 import judge from "./judge/index.js";
 
 const fastify = Fastify({ logger: false });
@@ -21,7 +19,7 @@ await fastify.register(cors, { origin: true });
 // In-memory store
 const matches = new Map<string, GameState>();
 const sockets = new Map<string, Set<WebSocket>>();
-const metrics = { wsSendFailures: 0, totalMoves: 0 };
+const metrics = { wsSendFailures: 0, totalMoves: 0, latency: 0 };
 
 // --- Utility
 function now(){ return Date.now(); }
@@ -42,12 +40,21 @@ function broadcast(matchId: string, type: string, payload: any){
     }catch(err){
       metrics.wsSendFailures++;
       console.warn('WS send failed', err, { wsSendFailures: metrics.wsSendFailures });
+      try{
+        ws.close();
+      }catch{}
+      set.delete(ws);
     }
+  }
+  if(set.size === 0){
+    sockets.delete(matchId);
   }
 }
 
-function recordMove(matchId: string, latency: number, state: GameState){
+function logMetrics(matchId: string, move: Move, state: GameState){
+  const latency = Date.now() - move.timestamp;
   metrics.totalMoves++;
+  metrics.latency = latency;
   console.log("[metrics]", {
     matchId,
     latency,
@@ -106,45 +113,7 @@ fastify.get<{ Params: { id: string } }>("/match/:id/log", async (req, reply) => 
   return reply.send(state);
 });
 
-fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) => {
-  const id = req.params.id;
-  const state = matches.get(id);
-  if(!state) return reply.code(404).send({ error: "No such match" });
-
-  const move = (req.body as any) as Move;
-  // sanitize text fields
-  if(move.type === "cast"){
-    const bead = move.payload?.bead as Bead;
-    if(bead){
-      bead.content = sanitizeMarkdown(bead.content);
-      if(typeof bead.title === "string"){
-        bead.title = sanitizeMarkdown(bead.title);
-      }
-    }
-  } else if(move.type === "bind"){
-    if(typeof move.payload?.justification === "string"){
-      move.payload.justification = sanitizeMarkdown(move.payload.justification);
-    }
-  }
-  const validation = validateMove(move, state);
-  if(!validation.ok){
-    return reply.code(400).send({ error: validation.error });
-  }
-  move.valid = true;
-  applyMoveWithResources(state, move);
-  state.updatedAt = now();
-  const idx = state.players.findIndex(p=>p.id===move.playerId);
-  if(idx>=0 && state.players.length>0){
-    const next = state.players[(idx+1)%state.players.length];
-    state.currentPlayerId = next.id;
-  }
-  broadcast(id, "move:accepted", move);
-  broadcast(id, "state:update", state);
-  console.log("[move]", move);
-  const latency = Date.now() - move.timestamp;
-  recordMove(id, latency, state);
-  return reply.send({ ok: true });
-});
+registerMoveRoute(fastify, { matches, broadcast, now, logMetrics });
 
 fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) => {
   const id = req.params.id;
@@ -155,6 +124,8 @@ fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) 
   broadcast(id, "end:judgment", scroll);
   return reply.send(scroll);
 });
+
+fastify.get("/metrics", async () => metrics);
 
 // --- WebSocket (per match)
 const server = fastify.server;
