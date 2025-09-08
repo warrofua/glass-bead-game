@@ -1,0 +1,22 @@
+# Ignore node dependencies
+node_modules/
+
+# Build outputs
+/dist/
+packages/*/dist/
+apps/*/dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+
+# Misc
+.DS_Store
+
+# Generated JS from TypeScript builds
+apps/*/src/**/*.js
+packages/*/src/**/*.js
