@@ -46,8 +46,7 @@ function broadcast(matchId: string, type: string, payload: any){
   }
 }
 
-function logMetrics(matchId: string, move: Move, state: GameState){
-  const latency = Date.now() - move.timestamp;
+function recordMove(matchId: string, latency: number, state: GameState){
   metrics.totalMoves++;
   console.log("[metrics]", {
     matchId,
@@ -141,7 +140,9 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
   }
   broadcast(id, "move:accepted", move);
   broadcast(id, "state:update", state);
-  logMetrics(id, move, state);
+  console.log("[move]", move);
+  const latency = Date.now() - move.timestamp;
+  recordMove(id, latency, state);
   return reply.send({ ok: true });
 });
 
@@ -150,6 +151,7 @@ fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) 
   const state = matches.get(id);
   if(!state) return reply.code(404).send({ error: "No such match" });
   const scroll = judge(state);
+  console.log("[judge]", scroll);
   broadcast(id, "end:judgment", scroll);
   return reply.send(scroll);
 });
