@@ -4,13 +4,18 @@ import type { GameState, Bead, Move, JudgmentScroll } from "@gbg/types";
 type WsMsg = { type: string; payload: any };
 
 // Helper around fetch that only sets the JSON content type when a body is
-// present. Sending a `Content-Type: application/json` header with an empty
-// body causes Fastify to return a 400 Bad Request, so we avoid that here.
-const api = (path: string, opts: RequestInit = {}) => {
+// present (Fastify returns 400 on an empty JSON body) and throws on HTTP
+// errors.
+const api = async (path: string, opts: RequestInit = {}) => {
   const headers = opts.body
     ? { "Content-Type": "application/json", ...(opts.headers || {}) }
     : opts.headers;
-  return fetch(`http://localhost:8787${path}`, { ...opts, headers });
+  const res = await fetch(`http://localhost:8787${path}`, { ...opts, headers });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || `Request failed with ${res.status}`);
+  }
+  return res;
 };
 
 export default function App() {
@@ -35,19 +40,30 @@ export default function App() {
   };
 
   const createMatch = async () => {
-    const res = await api("/match", { method: "POST" });
-    const data = await res.json();
-    setMatchId(data.id);
-    setState(data);
-    connectWs(data.id);
+    try {
+      const res = await api("/match", { method: "POST" });
+      const data = await res.json();
+      setMatchId(data.id);
+      setState(data);
+      connectWs(data.id);
+    } catch (err) {
+      console.error("Failed to create match", err);
+    }
   };
 
   const joinMatch = async () => {
     if (!matchId || !handle) return;
     connectWs(matchId);
-    const res = await api(`/match/${matchId}/join`, { method: "POST", body: JSON.stringify({ handle }) });
-    const data = await res.json();
-    if (data?.id) setPlayerId(data.id);
+    try {
+      const res = await api(`/match/${matchId}/join`, {
+        method: "POST",
+        body: JSON.stringify({ handle })
+      });
+      const data = await res.json();
+      if (data?.id) setPlayerId(data.id);
+    } catch (err) {
+      console.error("Failed to join match", err);
+    }
   };
 
   const castBead = async () => {
@@ -72,7 +88,14 @@ export default function App() {
       durationMs: 1000,
       valid: true
     };
-    await api(`/match/${state.id}/move`, { method: "POST", body: JSON.stringify(move) });
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move)
+      });
+    } catch (err) {
+      console.error("Failed to cast bead", err);
+    }
   };
 
   const bindFirstTwo = async () => {
@@ -92,26 +115,41 @@ export default function App() {
       durationMs: 800,
       valid: true
     };
-    await api(`/match/${state.id}/move`, { method: "POST", body: JSON.stringify(move) });
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move)
+      });
+    } catch (err) {
+      console.error("Failed to bind beads", err);
+    }
   };
 
   const requestJudgment = async () => {
     if (!state) return;
-    const res = await api(`/match/${state.id}/judge`, { method: "POST" });
-    const data = (await res.json()) as JudgmentScroll;
-    setScroll(data);
+    try {
+      const res = await api(`/match/${state.id}/judge`, { method: "POST" });
+      const data = (await res.json()) as JudgmentScroll;
+      setScroll(data);
+    } catch (err) {
+      console.error("Failed to request judgment", err);
+    }
   };
 
   const exportLog = async () => {
     if (!state) return;
-    const res = await api(`/match/${state.id}/log`);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `match-${state.id}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const res = await api(`/match/${state.id}/log`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `match-${state.id}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to export log", err);
+    }
   };
 
   return (
@@ -131,7 +169,9 @@ export default function App() {
         <div className="pt-4">
           <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Seeds</h2>
           <ul className="text-sm mt-2 space-y-1">
-            {state?.seeds.map(s => <li key={s.id} className="opacity-80">• {s.text} <span className="opacity-60">({s.domain})</span></li>)}
+            {state?.seeds?.map(s => (
+              <li key={s.id} className="opacity-80">• {s.text} <span className="opacity-60">({s.domain})</span></li>
+            ))}
           </ul>
         </div>
         <div className="pt-4 space-y-2">
