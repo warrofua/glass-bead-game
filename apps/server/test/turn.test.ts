@@ -8,9 +8,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 test('turn switches to next player after move', async (t) => {
   const cwd = path.join(__dirname, '..');
+  const port = 9994;
   const server = spawn('node', ['dist/index.js'], {
     cwd,
-    env: { ...process.env, PORT: '9997' },
+    env: { ...process.env, PORT: String(port) },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   await new Promise(res => setTimeout(res, 1000));
@@ -18,7 +19,7 @@ test('turn switches to next player after move', async (t) => {
     server.kill();
   });
 
-  const base = 'http://127.0.0.1:9997';
+  const base = `http://127.0.0.1:${port}`;
 
   const matchRes = await fetch(`${base}/match`, { method: 'POST' });
   const match = await matchRes.json();
