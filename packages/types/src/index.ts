@@ -143,3 +143,34 @@ export function validateMove(move: Move, state: GameState): boolean {
 
   return true; // other move types are treated as valid for now
 }
+/**
+ * Apply a move to mutate the given game state. Supports basic `cast` and `bind` moves.
+ * Assumes the move has already been validated.
+ */
+export function applyMove(state: GameState, move: Move): void {
+  state.moves.push(move);
+  if (move.type === "cast") {
+    const bead = move.payload?.bead as Bead | undefined;
+    if (bead) {
+      state.beads[bead.id] = bead;
+    }
+  } else if (move.type === "bind") {
+    const { edgeId, from, to, label, justification } = move.payload ?? {};
+    const id = edgeId ?? move.id;
+    const edge: Edge = { id, from, to, label, justification };
+    state.edges[id] = edge;
+  }
+  state.updatedAt = move.timestamp;
+}
+
+/**
+ * Replay a sequence of moves from an initial state and return the resulting state.
+ * The initial state is not mutated.
+ */
+export function replayMoves(initial: GameState, moves: Move[]): GameState {
+  const state: GameState = JSON.parse(JSON.stringify(initial));
+  for (const m of moves) {
+    applyMove(state, m);
+  }
+  return state;
+}
