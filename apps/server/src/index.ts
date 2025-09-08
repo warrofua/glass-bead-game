@@ -15,10 +15,23 @@ import {
   validateMove,
   sanitizeMarkdown,
 } from "@gbg/types";
-// @ts-ignore - import TypeScript module without build step
-const { scoreNovelty } = await import("../../../judge/novelty.ts") as {
-  scoreNovelty: (state: GameState) => Record<string, number>;
-};
+
+let scoreNovelty: (state: GameState) => Record<string, number>;
+try {
+  // @ts-ignore - import JavaScript module outside rootDir
+  ({ scoreNovelty } = await import("../../../judge/novelty.js") as {
+    scoreNovelty: typeof scoreNovelty;
+  });
+} catch (err: any) {
+  if (err.code === "ERR_MODULE_NOT_FOUND" || err.code === "MODULE_NOT_FOUND") {
+    // @ts-ignore - import TypeScript module without build step
+    ({ scoreNovelty } = await import("../../../judge/novelty.ts") as {
+      scoreNovelty: typeof scoreNovelty;
+    });
+  } else {
+    throw err;
+  }
+}
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
