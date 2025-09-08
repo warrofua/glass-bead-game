@@ -88,6 +88,11 @@ A competitive, collaborative game of idea‑weaving. Two players place **beads**
 * **US‑12 (Concordance):** We co‑author a final Cathedral node with references.
 * **US‑13 (Force‑Graph):** I can manipulate a spatial graph of beads and strings.
 
+**Beta features:**
+
+* **Twist enforcement:** Constraint cards may lock allowed modalities or require a specific relation label, and the move validator must reject moves that violate the active twist.
+* **Counterpoint move:** Players can create a counterpoint referencing an opponent's bead in another modality; transformation logic is stubbed for later implementation.
+
 ---
 
 ## 6. Functional Requirements (numbered)
@@ -130,6 +135,7 @@ A competitive, collaborative game of idea‑weaving. Two players place **beads**
 * **GBG‑REQ‑060:** Add Twists with enforcement in validator.
 * **GBG‑REQ‑061:** Add non‑text modalities and transmute/mirror moves.
 * **GBG‑REQ‑062:** Add Concordance composer and final Cathedral node.
+* **GBG‑REQ‑063:** Introduce Counterpoint move targeting an opponent's bead.
 
 ---
 

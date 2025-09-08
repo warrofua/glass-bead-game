@@ -18,7 +18,17 @@ export interface Bead {
 export interface Edge {
   id: string; from: string; to: string; label: RelationLabel; justification: string;
 }
-export type MoveType = "cast" | "bind" | "transmute" | "lift" | "refute" | "canonize" | "prune" | "mirror" | "joker";
+export type MoveType =
+  | "cast"
+  | "bind"
+  | "transmute"
+  | "lift"
+  | "refute"
+  | "canonize"
+  | "prune"
+  | "mirror"
+  | "joker"
+  | "counterpoint";
 export interface Move {
   id: string; playerId: string; type: MoveType; payload: any;
   timestamp: number; durationMs: number; valid: boolean; notes?: string;
@@ -106,6 +116,18 @@ export function validateSeed(seed: Seed): boolean {
 export function validateMove(move: Move, state: GameState): boolean {
   if (!move || !state) return false;
 
+  const twist = state.twist?.effect;
+  if (twist) {
+    if (twist.modalityLock && move.type === "cast") {
+      const bead = move.payload?.bead as Bead | undefined;
+      if (!bead || !twist.modalityLock.includes(bead.modality)) return false;
+    }
+    if (twist.requiredRelation && move.type === "bind") {
+      const { label } = move.payload ?? {};
+      if (label !== twist.requiredRelation) return false;
+    }
+  }
+
   if (move.type === "cast") {
     const bead = move.payload?.bead as Bead | undefined;
     if (!bead) return false;
@@ -141,6 +163,15 @@ export function validateMove(move: Move, state: GameState): boolean {
     return true;
   }
 
+  if (move.type === "counterpoint") {
+    const { targetId } = move.payload ?? {};
+    if (!targetId) return false;
+    const target = state.beads[targetId];
+    if (!target) return false;
+    if (target.ownerId === move.playerId) return false;
+    return true;
+  }
+
   return true; // other move types are treated as valid for now
 }
 /**
@@ -159,6 +190,8 @@ export function applyMove(state: GameState, move: Move): void {
     const id = edgeId ?? move.id;
     const edge: Edge = { id, from, to, label, justification };
     state.edges[id] = edge;
+  } else if (move.type === "counterpoint") {
+    // TODO: transform target bead into a new modality referencing the original
   }
   state.updatedAt = move.timestamp;
 }
