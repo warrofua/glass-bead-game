@@ -84,7 +84,7 @@ export default function App() {
       ownerId: playerId,
       modality: "text",
       title: "Idea",
-      content: JSON.stringify({ markdown: text }),
+      content: text,
       complexity: 1,
       createdAt: Date.now(),
       seedId: state.seeds[0]?.id
@@ -268,10 +268,5 @@ export default function App() {
 }
 
 function tryParseMarkdown(content: string){
-  try{
-    const obj = JSON.parse(content);
-    return obj.markdown || content;
-  }catch{
-    return content;
-  }
+  return content;
 }
