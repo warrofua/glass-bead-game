@@ -4,7 +4,6 @@ import { randomUUID } from "node:crypto";
 import type { IncomingMessage } from "http";
 import type { Socket } from "net";
 import WebSocket, { WebSocketServer } from "ws";
-import { setTimeout as sleep } from "node:timers/promises";
 import {
   GameState,
   Player,
@@ -23,7 +22,7 @@ await fastify.register(cors, { origin: true });
 // In-memory store
 const matches = new Map<string, GameState>();
 const sockets = new Map<string, Set<WebSocket>>();
-const metrics = { wsSendFailures: 0 };
+const metrics = { wsSendFailures: 0, totalMoves: 0 };
 
 // --- Utility
 function now(){ return Date.now(); }
@@ -46,6 +45,19 @@ function broadcast(matchId: string, type: string, payload: any){
       console.warn('WS send failed', err, { wsSendFailures: metrics.wsSendFailures });
     }
   }
+}
+
+function logMetrics(matchId: string, move: Move, state: GameState){
+  const latency = Date.now() - move.timestamp;
+  metrics.totalMoves++;
+  console.log("[metrics]", {
+    matchId,
+    latency,
+    moves: state.moves.length,
+    beads: Object.keys(state.beads).length,
+    edges: Object.keys(state.edges).length,
+    totalMoves: metrics.totalMoves
+  });
 }
 
 // --- Judging Stub (deterministic-ish placeholder)
@@ -162,6 +174,7 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
   state.updatedAt = now();
   broadcast(id, "move:accepted", move);
   broadcast(id, "state:update", state);
+  logMetrics(id, move, state);
   return reply.send({ ok: true });
 });
 
