@@ -45,6 +45,13 @@ export default function registerMoveRoute(
             move.payload.justification
           );
         }
+        if (
+          move.payload &&
+          move.payload.edgeId === undefined &&
+          move.payload.id !== undefined
+        ) {
+          move.payload.edgeId = move.payload.id;
+        }
       }
       const validation = validateMove(move, state);
       if (!validation.ok) {
