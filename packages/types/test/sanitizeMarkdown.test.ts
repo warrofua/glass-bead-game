@@ -20,3 +20,9 @@ test('removes javascript URLs', () => {
   const clean = sanitizeMarkdown(dirty);
   assert.equal(clean, '<a>hi</a>');
 });
+
+test('truncates output to 10k characters', () => {
+  const dirty = 'a'.repeat(10_050);
+  const clean = sanitizeMarkdown(dirty);
+  assert.equal(clean.length, 10_000);
+});
