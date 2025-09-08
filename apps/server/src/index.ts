@@ -15,6 +15,7 @@ import {
   validateMove,
   sanitizeMarkdown,
 } from "@gbg/types";
+import { exportMatch } from "./persistence.js";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -121,13 +122,14 @@ fastify.get<{ Params: { id: string } }>("/match/:id", async (req, reply) => {
   return reply.send(state);
 });
 
-fastify.get<{ Params: { id: string } }>("/match/:id/log", async (req, reply) => {
+fastify.get<{ Params: { id: string } }>("/match/:id/export", async (req, reply) => {
   const state = matches.get(req.params.id);
   if(!state) return reply.code(404).send({ error: "No such match" });
+  const json = exportMatch(state);
   reply
     .header("Content-Type", "application/json")
     .header("Content-Disposition", `attachment; filename=match-${state.id}.json`);
-  return reply.send(state);
+  return reply.send(json);
 });
 
 fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) => {
@@ -136,6 +138,7 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
   if(!state) return reply.code(404).send({ error: "No such match" });
 
   const move = (req.body as any) as Move;
+  if(!move.timestamp) move.timestamp = now();
   // sanitize text fields
   if(move.type === "cast"){
     const bead = move.payload?.bead as Bead;
@@ -151,6 +154,9 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
     }
   }
   if(!validateMove(move, state)){
+    move.valid = false;
+    state.moves.push(move);
+    state.updatedAt = move.timestamp;
     return reply.code(400).send({ error: "Invalid move" });
   }
   move.valid = true;
@@ -162,16 +168,18 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
       state.beads[bead.id] = bead;
     }
   } else if (move.type === "bind"){
+    const edgeId = move.payload?.edgeId || move.payload?.id || randomUUID().slice(0,6);
     const edge = {
-      id: move.payload?.id || randomUUID().slice(0,6),
+      id: edgeId,
       from: move.payload?.from,
       to: move.payload?.to,
       label: move.payload?.label,
       justification: move.payload?.justification
     } as Edge;
     state.edges[edge.id] = edge;
+    move.payload.edgeId = edgeId;
   }
-  state.updatedAt = now();
+  state.updatedAt = move.timestamp;
   broadcast(id, "move:accepted", move);
   broadcast(id, "state:update", state);
   logMetrics(id, move, state);
