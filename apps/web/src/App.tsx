@@ -1,0 +1,167 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { GameState, Bead, Move } from "@gbg/types";
+
+type WsMsg = { type: string; payload: any };
+
+const api = (path: string, opts?: RequestInit) =>
+  fetch(`http://localhost:8787${path}`, { headers: { "Content-Type": "application/json" }, ...opts });
+
+export default function App() {
+  const [matchId, setMatchId] = useState<string>(() => localStorage.getItem("matchId") || "");
+  const [handle, setHandle] = useState<string>(() => localStorage.getItem("handle") || "");
+  const [playerId, setPlayerId] = useState<string>("");
+  const [state, setState] = useState<GameState | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => { localStorage.setItem("matchId", matchId); }, [matchId]);
+  useEffect(() => { localStorage.setItem("handle", handle); }, [handle]);
+
+  const connectWs = (id: string) => {
+    wsRef.current?.close();
+    const ws = new WebSocket(`ws://localhost:8787/?matchId=${id}`);
+    ws.onmessage = (e) => {
+      const msg: WsMsg = JSON.parse(e.data);
+      if (msg.type === "state:update") setState(msg.payload);
+    };
+    wsRef.current = ws;
+  };
+
+  const createMatch = async () => {
+    const res = await api("/match", { method: "POST" });
+    const data = await res.json();
+    setMatchId(data.id);
+    setState(data);
+    connectWs(data.id);
+  };
+
+  const joinMatch = async () => {
+    if (!matchId || !handle) return;
+    connectWs(matchId);
+    const res = await api(`/match/${matchId}/join`, { method: "POST", body: JSON.stringify({ handle }) });
+    const data = await res.json();
+    if (data?.id) setPlayerId(data.id);
+  };
+
+  const castBead = async () => {
+    if (!playerId || !state) return;
+    const beadId = `b_${Math.random().toString(36).slice(2, 8)}`;
+    const bead: Bead = {
+      id: beadId,
+      ownerId: playerId,
+      modality: "text",
+      title: "Idea",
+      content: JSON.stringify({ markdown: "A small bead of meaning." }),
+      complexity: 1,
+      createdAt: Date.now(),
+      seedId: state.seeds[0]?.id
+    };
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "cast",
+      payload: { bead },
+      timestamp: Date.now(),
+      durationMs: 1000,
+      valid: true
+    };
+    await api(`/match/${state.id}/move`, { method: "POST", body: JSON.stringify(move) });
+  };
+
+  const bindFirstTwo = async () => {
+    if (!playerId || !state) return;
+    const beads = Object.values(state.beads);
+    if (beads.length < 2) return;
+    const [a, b] = beads.slice(0, 2);
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "bind",
+      payload: {
+        from: a.id, to: b.id, label: "analogy",
+        justification: "Two features align; one disanalogy is noted."
+      },
+      timestamp: Date.now(),
+      durationMs: 800,
+      valid: true
+    };
+    await api(`/match/${state.id}/move`, { method: "POST", body: JSON.stringify(move) });
+  };
+
+  const requestJudgment = async () => {
+    if (!state) return;
+    const res = await api(`/match/${state.id}/judge`, { method: "POST" });
+    const scroll = await res.json();
+    alert(`Winner: ${scroll.winner}\nScores: ${JSON.stringify(scroll.scores, null, 2)}`);
+  };
+
+  return (
+    <div className="min-h-screen p-4 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
+      <aside className="bg-[var(--panel)] rounded-2xl p-4 space-y-3 shadow">
+        <h1 className="text-xl font-semibold">Glass Bead Game — MVP</h1>
+        <div className="space-y-2">
+          <label className="block text-sm text-[var(--muted)]">Match ID</label>
+          <input value={matchId} onChange={e=>setMatchId(e.target.value)} className="w-full bg-zinc-900 rounded px-3 py-2" placeholder="(create or paste)"/>
+          <label className="block text-sm text-[var(--muted)]">Handle</label>
+          <input value={handle} onChange={e=>setHandle(e.target.value)} className="w-full bg-zinc-900 rounded px-3 py-2" placeholder="e.g., MagisterRex"/>
+          <div className="flex gap-2 pt-2">
+            <button onClick={createMatch} className="px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Create</button>
+            <button onClick={joinMatch} className="px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Join</button>
+          </div>
+        </div>
+        <div className="pt-4">
+          <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Seeds</h2>
+          <ul className="text-sm mt-2 space-y-1">
+            {state?.seeds.map(s => <li key={s.id} className="opacity-80">• {s.text} <span className="opacity-60">({s.domain})</span></li>)}
+          </ul>
+        </div>
+        <div className="pt-4 space-y-2">
+          <button onClick={castBead} className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500">Cast Bead</button>
+          <button onClick={bindFirstTwo} className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500">Bind First Two</button>
+          <button onClick={requestJudgment} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500">Request Judgment</button>
+        </div>
+        <p className="text-xs text-[var(--muted)] pt-4">MVP: cast text beads, bind, get a stub judgment.</p>
+      </aside>
+
+      <main className="bg-[var(--panel)] rounded-2xl p-4 shadow">
+        <h2 className="text-lg font-medium mb-3">Weave</h2>
+        {!state && <p className="opacity-60">Create or join a match to begin.</p>}
+        {state && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <section>
+              <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Beads</h3>
+              <ul className="mt-2 space-y-2">
+                {Object.values(state.beads).map(b => (
+                  <li key={b.id} className="p-3 rounded bg-zinc-900">
+                    <div className="text-sm font-semibold">{b.title || b.id}</div>
+                    <div className="text-xs opacity-70">{b.modality} · by {b.ownerId}</div>
+                    <div className="text-xs mt-1 opacity-80">{tryParseMarkdown(b.content)}</div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section>
+              <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Strings</h3>
+              <ul className="mt-2 space-y-2">
+                {Object.values(state.edges).map(e => (
+                  <li key={e.id} className="p-3 rounded bg-zinc-900 text-xs">
+                    <div className="opacity-80"><b>{e.label}</b>: {e.from} → {e.to}</div>
+                    <div className="opacity-60 mt-1">{e.justification}</div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function tryParseMarkdown(content: string){
+  try{
+    const obj = JSON.parse(content);
+    return obj.markdown || content;
+  }catch{
+    return content;
+  }
+}

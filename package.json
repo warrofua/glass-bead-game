@@ -1,0 +1,19 @@
+{
+  "name": "glass-bead-game",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "npm-run-all -p dev:*",
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:server": "npm --workspace apps/server run dev",
+    "build": "npm-run-all -p build:*",
+    "build:web": "npm --workspace apps/web run build",
+    "build:server": "npm --workspace apps/server run build",
+    "typecheck": "npm-run-all -p typecheck:*",
+    "typecheck:web": "npm --workspace apps/web run typecheck",
+    "typecheck:server": "npm --workspace apps/server run typecheck"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.5"
+  }
+}

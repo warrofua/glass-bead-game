@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@gbg/types": ["../../packages/types/src"]
+    }
+  },
+  "include": ["src", "vite-env.d.ts"]
+}
