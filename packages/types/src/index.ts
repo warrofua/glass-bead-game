@@ -32,6 +32,7 @@ export interface Cathedral { id: string; content: string; references: string[]; 
 
 export interface GameState {
   id: string; round: 1|2|3|4; phase: string; players: Player[];
+  currentPlayerId?: string;
   seeds: Seed[]; beads: Record<string,Bead>; edges: Record<string,Edge>; moves: Move[];
   twist?: ConstraintCard; cathedral?: Cathedral; createdAt: number; updatedAt: number;
 }
@@ -103,45 +104,73 @@ export function validateSeed(seed: Seed): boolean {
  * Validate a move against a given game state. Currently supports basic rules for
  * `cast` and `bind` moves.
  */
-export function validateMove(move: Move, state: GameState): boolean {
-  if (!move || !state) return false;
+export interface ValidationResult { ok: boolean; error?: string }
+
+const MOVE_COSTS: Record<MoveType, { insight?: number; restraint?: number }> = {
+  cast: { insight: 1 },
+  bind: { restraint: 1 },
+  transmute: { insight: 1 },
+  lift: { insight: 1 },
+  refute: { restraint: 1 },
+  canonize: { insight: 1, restraint: 1 },
+  prune: { restraint: 1 },
+  mirror: { insight: 1 },
+  joker: {}
+};
+
+export function validateMove(move: Move, state: GameState): ValidationResult {
+  if (!move || !state) return { ok: false, error: "Missing move or state" };
+  const player = state.players.find((p) => p.id === move.playerId);
+  if (!player) return { ok: false, error: "Unknown player" };
+
+  const cost = MOVE_COSTS[move.type] ?? {};
+  const insightShort = Math.max(0, (cost.insight ?? 0) - player.resources.insight);
+  const restraintShort = Math.max(0, (cost.restraint ?? 0) - player.resources.restraint);
+  const wild = player.resources.wildAvailable ? 1 : 0;
+  if (insightShort + restraintShort > wild) {
+    if (insightShort && restraintShort)
+      return { ok: false, error: "Not enough insight and restraint" };
+    if (insightShort) return { ok: false, error: "Not enough insight" };
+    if (restraintShort) return { ok: false, error: "Not enough restraint" };
+  }
 
   if (move.type === "cast") {
     const bead = move.payload?.bead as Bead | undefined;
-    if (!bead) return false;
-    if (bead.modality !== "text") return false;
-    if (typeof bead.content !== "string") return false;
-    if (bead.content.trim().length === 0) return false;
+    if (!bead) return { ok: false, error: "Missing bead" };
+    if (bead.modality !== "text") return { ok: false, error: "Only text beads allowed" };
+    if (typeof bead.content !== "string") return { ok: false, error: "Invalid content" };
+    if (bead.content.trim().length === 0) return { ok: false, error: "Empty content" };
     bead.content = sanitizeMarkdown(bead.content);
-    if (bead.content.length > 10_000) return false;
+    if (bead.content.length > 10_000) return { ok: false, error: "Content too long" };
     if (typeof bead.complexity !== "number" || bead.complexity < 1 || bead.complexity > 5)
-      return false;
+      return { ok: false, error: "Invalid complexity" };
     if (typeof bead.title === "string") {
       bead.title = sanitizeMarkdown(bead.title);
-      if (bead.title.length > 80) return false;
+      if (bead.title.length > 80) return { ok: false, error: "Title too long" };
     }
-    if (bead.seedId && !state.seeds.find((s) => s.id === bead.seedId)) return false;
-    return true;
+    if (bead.seedId && !state.seeds.find((s) => s.id === bead.seedId))
+      return { ok: false, error: "Unknown seed" };
+    return { ok: true };
   }
 
   if (move.type === "bind") {
     const { from, to, label, justification } = move.payload ?? {};
-    if (!from || !to || from === to) return false;
-    if (!state.beads[from] || !state.beads[to]) return false;
-    if (label !== "analogy") return false;
+    if (!from || !to || from === to) return { ok: false, error: "Invalid endpoints" };
+    if (!state.beads[from] || !state.beads[to]) return { ok: false, error: "Bead not found" };
+    if (label !== "analogy") return { ok: false, error: "Unsupported relation" };
     if (typeof justification !== "string" || justification.trim().length === 0)
-      return false;
+      return { ok: false, error: "Missing justification" };
     const cleanJust = sanitizeMarkdown(justification);
     move.payload.justification = cleanJust;
     const sentences = cleanJust
       .split(/[.!?]/)
       .map((s: string) => s.trim())
       .filter((s: string) => s.length > 0);
-    if (sentences.length < 2) return false;
-    return true;
+    if (sentences.length < 2) return { ok: false, error: "Need two sentences" };
+    return { ok: true };
   }
 
-  return true; // other move types are treated as valid for now
+  return { ok: true }; // other move types are treated as valid for now
 }
 /**
  * Apply a move to mutate the given game state. Supports basic `cast` and `bind` moves.
@@ -163,6 +192,30 @@ export function applyMove(state: GameState, move: Move): void {
   state.updatedAt = move.timestamp;
 }
 
+/** Apply a move and deduct resource costs from the acting player. */
+export function applyMoveWithResources(state: GameState, move: Move): void {
+  applyMove(state, move);
+  const player = state.players.find((p) => p.id === move.playerId);
+  if (!player) return;
+  const cost = MOVE_COSTS[move.type] ?? {};
+  if (cost.insight) {
+    if (player.resources.insight >= cost.insight) {
+      player.resources.insight -= cost.insight;
+    } else if (player.resources.wildAvailable) {
+      player.resources.wildAvailable = false;
+      player.resources.insight = 0;
+    }
+  }
+  if (cost.restraint) {
+    if (player.resources.restraint >= cost.restraint) {
+      player.resources.restraint -= cost.restraint;
+    } else if (player.resources.wildAvailable) {
+      player.resources.wildAvailable = false;
+      player.resources.restraint = 0;
+    }
+  }
+}
+
 /**
  * Replay a sequence of moves from an initial state and return the resulting state.
  * The initial state is not mutated.
@@ -174,3 +227,5 @@ export function replayMoves(initial: GameState, moves: Move[]): GameState {
   }
   return state;
 }
+
+export * from './graph.js';

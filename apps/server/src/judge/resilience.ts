@@ -8,7 +8,7 @@ export interface ResilienceResult {
 function mulberry32(seed: number): () => number {
   let t = seed >>> 0;
   return () => {
-    t += 0x6D2B79F5;
+    t += 0x6d2b79f5;
     let r = Math.imul(t ^ (t >>> 15), t | 1);
     r ^= r + Math.imul(r ^ (r >>> 7), r | 61);
     return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
@@ -49,14 +49,14 @@ export function evaluateResilience(
   const players = state.players.map(p => p.id);
   const baseline = scoreTotals(state);
   const drops: Record<string, number> = Object.fromEntries(
-    players.map((id) => [id, 0] as [string, number])
+    players.map(id => [id, 0] as [string, number])
   );
   const weakImpact: Record<string, number> = {};
   const edges = Object.values<Edge>(state.edges);
 
   if (edges.length === 0) {
     return {
-      scores: Object.fromEntries(players.map((id) => [id, 1] as [string, number])),
+      scores: Object.fromEntries(players.map(id => [id, 1] as [string, number])),
       weakSpots: [],
     };
   }
