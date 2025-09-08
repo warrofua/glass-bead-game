@@ -7,14 +7,17 @@ Two‑player, online, AI‑judged prototype. This MVP includes:
 - A stub **Magister Ludi** judge that scores basic Resonance/Aesthetics
 
 ## Quickstart
-**Requirements:** Node 20+ (or 18+ with `--experimental‐fetch`), npm 9+
+**Requirements:** Node 20+ (or 18+ with `--experimental-fetch`), npm 9+
+
+Verify npm version and install dependencies from the repo root (no `--workspaces` flag):
 
 ```bash
-# from repo root
+npm --version  # should be 7+
 npm install
 npm run dev
 # web: http://localhost:5173  |  server: http://localhost:8787
 ```
+If `npm install` fails with `Unsupported URL Type "workspace:"`, replace any `workspace:*` entries in subpackage `package.json` files with relative `file:` links (e.g., `file:../../packages/types`).
 Open two browser windows, choose distinct handles, and join/create the same match ID.
 
 ## Scripts
