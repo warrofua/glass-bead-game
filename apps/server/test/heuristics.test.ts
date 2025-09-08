@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert';
 import { checkIntegrity } from '../src/judge/integrity';
 import { evaluateAesthetics } from '../src/judge/aesthetics';
-import { judge } from '../src/judge';
+import { judge } from '../src/judge/index.js';
 import { GameState, Bead, Edge } from '@gbg/types';
 
 function sampleState(): GameState {
