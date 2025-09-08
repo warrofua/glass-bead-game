@@ -155,8 +155,6 @@ fastify.post<{ Params: { id: string } }>("/match/:id/move", async (req, reply) =
   }
   if(!validateMove(move, state)){
     move.valid = false;
-    state.moves.push(move);
-    state.updatedAt = move.timestamp;
     return reply.code(400).send({ error: "Invalid move" });
   }
   move.valid = true;

@@ -18,5 +18,6 @@ export function replayMoves(log: GameState): GameState {
     moves: [],
     updatedAt: log.createdAt,
   };
-  return replayLib(initial, log.moves);
+  const moves = log.moves.filter((m) => m.valid !== false);
+  return replayLib(initial, moves);
 }
