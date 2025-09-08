@@ -7,6 +7,13 @@ export interface GraphState {
   inbound: Record<string, string[]>; // edge ids keyed by target bead
 }
 
+export interface PathWeight {
+  nodes: string[];
+  weight: number;
+  /** breakdown of weights for debugging */
+  steps: Array<{ from: string; to: string; weight: number }>;
+}
+
 export function addBead(state: GraphState, bead: Bead): void {
   state.beads[bead.id] = bead;
   if (!state.outbound[bead.id]) state.outbound[bead.id] = [];
@@ -81,3 +88,50 @@ export function maxWeightedPathFrom(
 
   return dfs(start);
 }
+
+/**
+ * Explore all simple paths in the graph and return the top N by total weight.
+ * Cycles are ignored by tracking visited nodes.
+ *
+ * Node weight is derived from bead complexity and edge weight defaults to 0.
+ */
+export function findStrongestPaths(state: GraphState, topN = 3): PathWeight[] {
+  const results: PathWeight[] = [];
+
+  const visit = (
+    nodeId: string,
+    visited: Set<string>,
+    path: string[],
+    weight: number,
+    steps: Array<{ from: string; to: string; weight: number }>
+  ) => {
+    visited.add(nodeId);
+    path.push(nodeId);
+    const nodeWeight = state.beads[nodeId]?.complexity ?? 0;
+    weight += nodeWeight;
+    const edgeIds = state.outbound[nodeId] || [];
+    if (edgeIds.length === 0) {
+      results.push({ nodes: [...path], weight, steps: [...steps] });
+    } else {
+      for (const edgeId of edgeIds) {
+        const edge = state.edges[edgeId];
+        if (!edge || visited.has(edge.to)) continue;
+        const stepWeight = 0; // no intrinsic edge weight
+        steps.push({ from: edge.from, to: edge.to, weight: stepWeight });
+        visit(edge.to, visited, path, weight + stepWeight, steps);
+        steps.pop();
+      }
+      results.push({ nodes: [...path], weight, steps: [...steps] });
+    }
+    path.pop();
+    visited.delete(nodeId);
+  };
+
+  for (const id of Object.keys(state.beads)) {
+    visit(id, new Set(), [], 0, []);
+  }
+
+  results.sort((a, b) => b.weight - a.weight);
+  return results.slice(0, topN);
+}
+
