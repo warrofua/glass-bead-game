@@ -3,8 +3,15 @@ import type { GameState, Bead, Move, JudgmentScroll } from "@gbg/types";
 
 type WsMsg = { type: string; payload: any };
 
-const api = (path: string, opts?: RequestInit) =>
-  fetch(`http://localhost:8787${path}`, { headers: { "Content-Type": "application/json" }, ...opts });
+// Helper around fetch that only sets the JSON content type when a body is
+// present. Sending a `Content-Type: application/json` header with an empty
+// body causes Fastify to return a 400 Bad Request, so we avoid that here.
+const api = (path: string, opts: RequestInit = {}) => {
+  const headers = opts.body
+    ? { "Content-Type": "application/json", ...(opts.headers || {}) }
+    : opts.headers;
+  return fetch(`http://localhost:8787${path}`, { ...opts, headers });
+};
 
 export default function App() {
   const [matchId, setMatchId] = useState<string>(() => localStorage.getItem("matchId") || "");
