@@ -29,7 +29,8 @@ export default function App() {
   useEffect(() => { localStorage.setItem("matchId", matchId); }, [matchId]);
   useEffect(() => { localStorage.setItem("handle", handle); }, [handle]);
 
-  const connectWs = (id: string) => {
+  const connectWs = (id?: string) => {
+    if (!id) return;
     wsRef.current?.close();
     const ws = new WebSocket(`ws://localhost:8787/?matchId=${id}`);
     ws.onmessage = (e) => {
@@ -43,6 +44,10 @@ export default function App() {
     try {
       const res = await api("/match", { method: "POST" });
       const data = await res.json();
+      if (!data?.id) {
+        console.error("Invalid match response", data);
+        return;
+      }
       setMatchId(data.id);
       setState(data);
       connectWs(data.id);
