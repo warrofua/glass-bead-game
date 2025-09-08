@@ -24,6 +24,7 @@ export default function App() {
   const [playerId, setPlayerId] = useState<string>("");
   const [state, setState] = useState<GameState | null>(null);
   const [scroll, setScroll] = useState<JudgmentScroll | null>(null);
+  const [beadText, setBeadText] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
 
   useEffect(() => { localStorage.setItem("matchId", matchId); }, [matchId]);
@@ -73,13 +74,15 @@ export default function App() {
 
   const castBead = async () => {
     if (!playerId || !state) return;
+    const text = beadText.trim();
+    if (!text || text.length > 500) return;
     const beadId = `b_${Math.random().toString(36).slice(2, 8)}`;
     const bead: Bead = {
       id: beadId,
       ownerId: playerId,
       modality: "text",
       title: "Idea",
-      content: JSON.stringify({ markdown: "A small bead of meaning." }),
+      content: JSON.stringify({ markdown: text }),
       complexity: 1,
       createdAt: Date.now(),
       seedId: state.seeds[0]?.id
@@ -98,6 +101,7 @@ export default function App() {
         method: "POST",
         body: JSON.stringify(move)
       });
+      setBeadText("");
     } catch (err) {
       console.error("Failed to cast bead", err);
     }
@@ -180,7 +184,20 @@ export default function App() {
           </ul>
         </div>
         <div className="pt-4 space-y-2">
-          <button onClick={castBead} className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500">Cast Bead</button>
+          <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Cast Bead</h2>
+          <textarea
+            value={beadText}
+            onChange={e => setBeadText(e.target.value)}
+            className="w-full bg-zinc-900 rounded px-3 py-2 h-24"
+            placeholder="Share an idea..."
+          />
+          <button
+            onClick={castBead}
+            disabled={!beadText.trim()}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cast Bead
+          </button>
           <button onClick={bindFirstTwo} className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500">Bind First Two</button>
           <button onClick={requestJudgment} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500">Request Judgment</button>
           <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>
