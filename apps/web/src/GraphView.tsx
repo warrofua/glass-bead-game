@@ -20,6 +20,10 @@ export interface GraphViewProps {
   strongPaths?: Array<{ nodes: string[]; why?: string }>;
   /** Index of selected strong path */
   selectedPathIndex?: number;
+  /** Per-bead lift values from 0 (bottom) to 1 (top) */
+  lift?: Record<string, number>;
+  /** Strength of the vertical lift force */
+  liftStrength?: number;
   width?: number;
   height?: number;
 }
@@ -29,11 +33,14 @@ export default function GraphView({
   initialState,
   strongPaths,
   selectedPathIndex,
+  lift,
+  liftStrength = 0.1,
   width = 800,
   height = 600,
 }: GraphViewProps) {
   const { state } = useMatchState(matchId, { initialState });
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const simulationRef = useRef<d3.Simulation<Node, Link> | null>(null);
 
   // Render graph using d3 whenever state or selection changes
   useEffect(() => {
@@ -50,6 +57,8 @@ export default function GraphView({
       .force("link", d3.forceLink<Node, Link>(links).id((d) => d.id))
       .force("charge", d3.forceManyBody<Node>().strength(-200))
       .force("center", d3.forceCenter(width / 2, height / 2));
+
+    simulationRef.current = simulation;
 
     const svg = d3.select<SVGSVGElement, unknown>(svgRef.current!);
     svg.selectAll("*").remove();
@@ -136,8 +145,24 @@ export default function GraphView({
 
     return () => {
       simulation.stop();
+      simulationRef.current = null;
     };
   }, [state, strongPaths, selectedPathIndex, width, height]);
+
+  // Update lift force whenever lift values change
+  useEffect(() => {
+    const simulation = simulationRef.current;
+    if (!simulation) return;
+    simulation
+      .force(
+        "lift",
+        d3
+          .forceY<Node>((d) => height * (1 - (lift?.[d.id] ?? 0)))
+          .strength(liftStrength)
+      )
+      .alpha(1)
+      .restart();
+  }, [lift, liftStrength, height]);
 
   return <svg ref={svgRef} width={width} height={height} />;
 }
