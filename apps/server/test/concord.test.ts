@@ -7,8 +7,7 @@ function randomId(prefix: string) {
 }
 
 test('concord builds cathedral from highest path', async (t) => {
-  const port = 9992;
-  const server = await startServer(port);
+  const { server, port } = await startServer();
   t.after(() => server.kill());
   const base = `http://localhost:${port}`;
 

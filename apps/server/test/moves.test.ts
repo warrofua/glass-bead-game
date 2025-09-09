@@ -1,25 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-function startServer(port: number){
-  const cwd = path.join(__dirname, '..');
-  const server = spawn('node', ['dist/index.js'], {
-    cwd,
-    env: { ...process.env, PORT: String(port) },
-    stdio: ['ignore','pipe','pipe']
-  });
-  return server;
-}
+import { startServer } from './server.helper.js';
 
 test('cast rejects when insight and wild exhausted', async (t) => {
-  const port = 9993;
-  const server = startServer(port);
-  await new Promise(r => setTimeout(r, 1000));
+  const { server, port } = await startServer();
   t.after(() => server.kill());
   const base = `http://localhost:${port}`;
 
@@ -81,9 +65,7 @@ test('cast rejects when insight and wild exhausted', async (t) => {
 });
 
 test('bind uses restraint then wild then rejects', async (t) => {
-  const port = 9996;
-  const server = startServer(port);
-  await new Promise(r => setTimeout(r, 1000));
+  const { server, port } = await startServer();
   t.after(() => server.kill());
   const base = `http://localhost:${port}`;
 

@@ -1,11 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
 import WebSocket from 'ws';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { startServer } from './server.helper.js';
 
 
 function waitForMessage(ws: WebSocket, type: string): Promise<any> {
@@ -27,18 +23,12 @@ function waitForMessage(ws: WebSocket, type: string): Promise<any> {
 }
 
 test('cast move broadcasts new bead to all players', async (t) => {
-  const cwd = path.join(__dirname, '..');
-  const server = spawn('node', ['dist/index.js'], {
-    cwd,
-    env: { ...process.env, PORT: '9999' },
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-  await new Promise(res => setTimeout(res, 1000));
+  const { server, port } = await startServer();
   t.after(() => {
     server.kill();
   });
 
-  const base = 'http://127.0.0.1:9999';
+  const base = `http://127.0.0.1:${port}`;
 
   // create match
   const matchRes = await fetch(`${base}/match`, { method: 'POST' });
@@ -57,8 +47,8 @@ test('cast move broadcasts new bead to all players', async (t) => {
   await join('B');
 
   // open websockets for both players
-  const ws1 = new WebSocket(`ws://127.0.0.1:9999/?matchId=${matchId}`);
-  const ws2 = new WebSocket(`ws://127.0.0.1:9999/?matchId=${matchId}`);
+  const ws1 = new WebSocket(`ws://127.0.0.1:${port}/?matchId=${matchId}`);
+  const ws2 = new WebSocket(`ws://127.0.0.1:${port}/?matchId=${matchId}`);
   const initial1 = waitForMessage(ws1, 'state:update');
   const initial2 = waitForMessage(ws2, 'state:update');
   await Promise.all([

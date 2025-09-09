@@ -1,18 +1,36 @@
 import { spawn, ChildProcess } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import net from 'node:net';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function startServer(port: number): Promise<ChildProcess>{
+export async function getFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.listen(0, () => {
+      const address = srv.address();
+      if (typeof address === 'object' && address) {
+        const port = address.port;
+        srv.close(err => (err ? reject(err) : resolve(port)));
+      } else {
+        srv.close(() => reject(new Error('failed to get port')));
+      }
+    });
+    srv.on('error', reject);
+  });
+}
+
+export async function startServer(port?: number): Promise<{ server: ChildProcess; port: number }> {
+  const actualPort = port ?? (await getFreePort());
   const cwd = path.join(__dirname, '..');
   const server = spawn('node', ['dist/index.js'], {
     cwd,
-    env: { ...process.env, PORT: String(port) },
-    stdio: ['ignore','pipe','pipe']
+    env: { ...process.env, PORT: String(actualPort) },
+    stdio: ['ignore', 'pipe', 'pipe']
   });
   await new Promise(res => setTimeout(res, 1000));
-  return server;
+  return { server, port: actualPort };
 }
 
 export async function createMatchWithMoves(base: string){
