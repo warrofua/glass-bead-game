@@ -19,6 +19,10 @@ export default function useMatchState(
 ) {
   const { autoConnect = true, initialState = null } = opts;
   const [state, setState] = useState<GameState | null>(initialState);
+  // Reset internal state whenever a new initial state is provided
+  useEffect(() => {
+    setState(initialState);
+  }, [initialState]);
   const wsRef = useRef<WebSocket | null>(null);
 
   const disconnect = useCallback(() => {
