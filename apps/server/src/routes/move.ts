@@ -31,7 +31,7 @@ export default function registerMoveRoute(
 
       const move = (req.body as any) as Move;
       // sanitize text fields
-      if (move.type === "cast") {
+      if (move.type === "cast" || move.type === "mirror") {
         const bead = move.payload?.bead as Bead;
         if (bead) {
           bead.content = sanitizeMarkdown(bead.content);
@@ -39,7 +39,7 @@ export default function registerMoveRoute(
             bead.title = sanitizeMarkdown(bead.title);
           }
         }
-      } else if (move.type === "bind") {
+      } else if (move.type === "bind" || move.type === "counterpoint") {
         if (typeof move.payload?.justification === "string") {
           move.payload.justification = sanitizeMarkdown(
             move.payload.justification

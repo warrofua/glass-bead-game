@@ -24,11 +24,27 @@ export default function App() {
   const [handle, setHandle] = useState<string>(() => localStorage.getItem("handle") || "");
   const [playerId, setPlayerId] = useState<string>("");
   const [scroll, setScroll] = useState<JudgmentScroll | null>(null);
+  const [selectedPath, setSelectedPath] = useState<number>(0);
   const [beadText, setBeadText] = useState("");
   const [cathedralText, setCathedralText] = useState("");
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
+
+  const twistAllows = (type: Move["type"]): boolean => {
+    const effect = state?.twist?.effect;
+    if (!effect) return true;
+    if ((type === "cast" || type === "mirror" || type === "counterpoint") && effect.modalityLock && !effect.modalityLock.includes("text")) return false;
+    if ((type === "bind" || type === "counterpoint") && effect.requiredRelation) {
+      const label = type === "bind" ? "analogy" : "motif-echo";
+      if (label !== effect.requiredRelation) return false;
+    }
+    if ((type === "bind" || type === "counterpoint") && effect.justificationLimit) {
+      const justification = type === "bind" ? "Two features align; one disanalogy is noted." : "Inverted motif. Counter view.";
+      if (justification.length > effect.justificationLimit) return false;
+    }
+    return true;
+  };
 
   useEffect(() => { localStorage.setItem("matchId", matchId); }, [matchId]);
   useEffect(() => { localStorage.setItem("handle", handle); }, [handle]);
@@ -65,7 +81,7 @@ export default function App() {
   };
 
   const castBead = async () => {
-    if (!playerId || !state) return;
+    if (!playerId || !state || !twistAllows("cast")) return;
     const text = beadText.trim();
     if (!text || text.length > 500) return;
     const beadId = `b_${Math.random().toString(36).slice(2, 8)}`;
@@ -108,7 +124,7 @@ export default function App() {
   };
 
   const bindSelected = async () => {
-    if (!playerId || !state || selected.length !== 2) return;
+    if (!playerId || !state || selected.length !== 2 || !twistAllows("bind")) return;
     const [from, to] = selected;
     const move: Move = {
       id: `m_${Math.random().toString(36).slice(2,8)}`,
@@ -132,6 +148,34 @@ export default function App() {
       setSelected([]);
     } catch (err) {
       console.error("Failed to bind beads", err);
+    }
+  };
+
+  const counterpointSelected = async () => {
+    if (!playerId || !state || selected.length !== 2 || !twistAllows("counterpoint")) return;
+    const [from, to] = selected;
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "counterpoint",
+      payload: {
+        from,
+        to,
+        label: "motif-echo",
+        justification: "Inverted motif. Counter view.",
+      },
+      timestamp: Date.now(),
+      durationMs: 800,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+      setSelected([]);
+    } catch (err) {
+      console.error("Failed to counterpoint beads", err);
     }
   };
 
@@ -163,6 +207,15 @@ export default function App() {
     }
   };
 
+  const drawTwist = async () => {
+    if (!state) return;
+    try {
+      await api(`/match/${state.id}/twist`, { method: "POST" });
+    } catch (err) {
+      console.error("Failed to draw twist", err);
+    }
+  };
+
   const suggestBead = async () => {
     if (!state || !playerId) return;
     try {
@@ -183,6 +236,7 @@ export default function App() {
       const res = await api(`/match/${state.id}/judge`, { method: "POST" });
       const data = (await res.json()) as JudgmentScroll;
       setScroll(data);
+      setSelectedPath(0);
     } catch (err) {
       console.error("Failed to request judgment", err);
     }
@@ -234,6 +288,16 @@ export default function App() {
             ))}
           </ul>
         </div>
+        {state && (
+          <div className="pt-4">
+            <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Twist</h2>
+            {state.twist ? (
+              <p className="text-sm mt-1">{state.twist.name}: {state.twist.description}</p>
+            ) : (
+              <button onClick={drawTwist} disabled={!isMyTurn} className="px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed">Draw Twist</button>
+            )}
+          </div>
+        )}
         <div className="pt-4 space-y-2">
           <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Cast Bead</h2>
           <textarea
@@ -251,17 +315,24 @@ export default function App() {
           </button>
           <button
             onClick={castBead}
-            disabled={!beadText.trim() || !isMyTurn}
+            disabled={!beadText.trim() || !isMyTurn || !twistAllows("cast")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cast Bead
           </button>
           <button
             onClick={bindSelected}
-            disabled={!isMyTurn || selected.length !== 2}
+            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("bind")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Bind Selected
+          </button>
+          <button
+            onClick={counterpointSelected}
+            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("counterpoint")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Counterpoint Selected
           </button>
         </div>
         <div className="pt-4 space-y-2">
@@ -279,7 +350,13 @@ export default function App() {
           >
             Canonize Cathedral
           </button>
-          <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
+          <button
+            onClick={requestJudgment}
+            disabled={!isMyTurn}
+            className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Request Judgment
+          </button>
           <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>
         </div>
         <p className="text-xs text-[var(--muted)] pt-4">MVP: cast text beads, bind, get a stub judgment.</p>
@@ -326,7 +403,7 @@ export default function App() {
             <section className="lg:col-span-2">
               <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Graph</h3>
               <div className="mt-2">
-                <GraphView matchId={matchId} strongPaths={scroll?.strongPaths} width={600} height={400} />
+                <GraphView matchId={matchId} strongPaths={scroll?.strongPaths} selectedPathIndex={selectedPath} width={600} height={400} />
               </div>
             </section>
           </div>
@@ -334,16 +411,36 @@ export default function App() {
         {scroll && (
           <section className="mt-6">
             <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Judgment</h3>
-            <div className="mt-2 text-sm">
-              <div className="mb-2">Winner: {scroll.winner || "TBD"}</div>
-              <ul className="space-y-1">
-                {Object.entries(scroll.scores).map(([pid, s]) => (
-                  <li key={pid} className="text-xs">
-                    <b>{pid}</b>: {(s.total * 100).toFixed(1)}% (res {s.resonance.toFixed(2)}, nov {s.novelty.toFixed(2)}, int {s.integrity.toFixed(2)})
-                  </li>
-                ))}
-              </ul>
-            </div>
+              <div className="mt-2 text-sm">
+                <div className="mb-2">Winner: {scroll.winner || "TBD"}</div>
+                <ul className="space-y-1">
+                  {Object.entries(scroll.scores).map(([pid, s]) => (
+                    <li key={pid} className="text-xs">
+                      <b>{pid}</b>: {(s.total * 100).toFixed(1)}% (res {s.resonance.toFixed(2)}, nov {s.novelty.toFixed(2)}, int {s.integrity.toFixed(2)}, aes {s.aesthetics.toFixed(2)}, res {s.resilience.toFixed(2)})
+                    </li>
+                  ))}
+                </ul>
+                {scroll.strongPaths.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-xs uppercase tracking-wide text-[var(--muted)]">Strong Paths</h4>
+                    <ul className="mt-1 space-y-1">
+                      {scroll.strongPaths.map((p, idx) => (
+                        <li key={idx}>
+                          <button onClick={() => setSelectedPath(idx)} className={`text-xs underline ${selectedPath === idx ? 'font-bold' : ''}`}>
+                            {p.nodes.join(' → ')} {p.why && `(${p.why})`}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {scroll.weakSpots.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-xs uppercase tracking-wide text-[var(--muted)]">Weak Spots</h4>
+                    <div className="text-xs">{scroll.weakSpots.join(', ')}</div>
+                  </div>
+                )}
+              </div>
           </section>
         )}
       </main>

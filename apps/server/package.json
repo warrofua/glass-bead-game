@@ -6,6 +6,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "npm --workspace @gbg/types run build && npm run build",
     "test": "node --test --import tsx test/*.test.ts"
   },
   "dependencies": {
