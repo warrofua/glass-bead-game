@@ -130,9 +130,8 @@ fastify.post<{ Params: { id: string } }>("/match/:id/ai", async (req, reply) => 
     const model = process.env.LLM_MODEL || "qwen7b:latest";
     const client = new Ollama();
     const prompt = `Seed: ${seed}\nOpponent: ${opponent}\nRespond with a short bead idea:`;
-    const stream = await client.generate({ model, prompt, stream: true });
-    for await (const part of stream) {
-      suggestion += part.response ?? "";
+    for await (const part of client.generate(model, prompt)) {
+      suggestion += part;
     }
   } catch (err) {
     console.warn("LLM suggest failed", err);
