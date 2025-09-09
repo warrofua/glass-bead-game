@@ -2,14 +2,20 @@ import { GameState, JudgmentScroll } from '@gbg/types';
 import { Ollama } from 'ollama';
 import judge from './index.js';
 
+interface LLMClient {
+  generate(model: string, prompt: string): AsyncIterable<string>;
+}
+
 /**
  * Use a local Ollama model to select the winning player.
  * Falls back to the deterministic judge if the model fails.
  */
-export async function judgeWithLLM(state: GameState): Promise<JudgmentScroll> {
+export async function judgeWithLLM(
+  state: GameState,
+  client: LLMClient = new Ollama(),
+): Promise<JudgmentScroll> {
   const baseline = judge(state);
   const model = process.env.LLM_MODEL || 'qwen7b:latest';
-  const client = new Ollama();
 
   try {
     const summary = state.players.map(p => {
