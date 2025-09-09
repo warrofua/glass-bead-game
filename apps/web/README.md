@@ -5,7 +5,9 @@ and WebSocket APIs to let two players create matches, cast beads, bind them and
 request judgments.
 
 The UI uses Tailwind CSS and persists the last used match ID and handle in local
-storage for convenience.
+storage for convenience. An AI suggestion button can propose bead ideas, and
+match state is managed by the `useMatchState` hook to keep the UI in sync via
+WebSockets.
 
 ## Development
 
@@ -20,6 +22,9 @@ npm --workspace apps/web run build
 
 # Type‑check the project
 npm --workspace apps/web run typecheck
+
+# Run tests
+npm --workspace apps/web run test
 ```
 
 The built assets will be output to `dist/`.
