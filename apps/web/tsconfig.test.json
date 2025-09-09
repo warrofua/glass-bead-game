@@ -1,8 +1,10 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "CommonJS",
+    "module": "ESNext",
     "moduleResolution": "node",
+    "allowJs": true,
+    "outDir": "./dist-test",
     "types": ["jest", "node", "@testing-library/jest-dom"]
   },
   "exclude": []
