@@ -23,6 +23,7 @@ await fastify.register(cors, { origin: true });
 const matches = new Map<string, GameState>();
 const sockets = new Map<string, Set<WebSocket>>();
 const metrics = { wsSendFailures: 0, totalMoves: 0, latency: 0 };
+const ratings = new Map<string, { wins: number; losses: number }>();
 
 // --- Utility
 function now(){ return Date.now(); }
@@ -182,10 +183,33 @@ fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) 
   const useLlm = !!process.env.LLM_MODEL;
   const scroll = useLlm ? await judgeWithLLM(state) : judge(state);
   broadcast(id, "end:judgment", scroll);
+  const winnerId = scroll.winner;
+  if (winnerId) {
+    for (const p of state.players) {
+      const rec = ratings.get(p.handle) || { wins: 0, losses: 0 };
+      if (p.id === winnerId) rec.wins++; else rec.losses++;
+      ratings.set(p.handle, rec);
+    }
+  }
   return reply.send(scroll);
 });
 
 fastify.get("/metrics", async () => metrics);
+
+fastify.get("/ratings", async () => {
+  return Array.from(ratings.entries()).map(([handle, rec]) => ({ handle, ...rec }));
+});
+
+fastify.post<{ Body: { handle: string; result: "win" | "loss" } }>("/ratings", async (req, reply) => {
+  const { handle, result } = req.body;
+  if (!handle || (result !== "win" && result !== "loss")) {
+    return reply.code(400).send({ error: "Invalid rating update" });
+  }
+  const rec = ratings.get(handle) || { wins: 0, losses: 0 };
+  if (result === "win") rec.wins++; else rec.losses++;
+  ratings.set(handle, rec);
+  return reply.send({ handle, ...rec });
+});
 
 // --- WebSocket (per match)
 const server = fastify.server;
