@@ -4,7 +4,7 @@
 
 **Doc Owner:** JF
 **Version:** 1.0 (MVP Sprint 1 scope + Beta preview)
-**Last Updated:** 2025-09-08
+**Last Updated:** 2025-09-09
 
 ---
 
