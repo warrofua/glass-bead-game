@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import * as d3 from "d3";
 import type { GameState } from "@gbg/types";
+import useMatchState from "./hooks/useMatchState";
 
 interface Node extends d3.SimulationNodeDatum {
   id: string;
@@ -31,23 +32,8 @@ export default function GraphView({
   width = 800,
   height = 600,
 }: GraphViewProps) {
-  const [state, setState] = useState<GameState | null>(initialState ?? null);
+  const { state } = useMatchState(matchId, { initialState });
   const svgRef = useRef<SVGSVGElement | null>(null);
-
-  // Subscribe to websocket for live updates
-  useEffect(() => {
-    if (!matchId) return;
-    const ws = new WebSocket(`ws://localhost:8787/?matchId=${matchId}`);
-    ws.onmessage = (e) => {
-      try {
-        const msg = JSON.parse(e.data);
-        if (msg.type === "state:update") setState(msg.payload as GameState);
-      } catch {
-        // ignore malformed
-      }
-    };
-    return () => ws.close();
-  }, [matchId]);
 
   // Render graph using d3 whenever state or selection changes
   useEffect(() => {
