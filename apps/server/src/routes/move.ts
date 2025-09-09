@@ -45,6 +45,11 @@ export default function registerMoveRoute(
             move.payload.justification
           );
         }
+      } else if (move.type === "prune") {
+        const { beadId, edgeId } = move.payload ?? {};
+        move.payload = {};
+        if (typeof beadId === "string") move.payload.beadId = beadId;
+        if (typeof edgeId === "string") move.payload.edgeId = edgeId;
       }
       const validation = validateMove(move, state);
       if (!validation.ok) {

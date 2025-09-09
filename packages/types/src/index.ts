@@ -170,6 +170,19 @@ export function validateMove(move: Move, state: GameState): ValidationResult {
     return { ok: true };
   }
 
+  if (move.type === "prune") {
+    const { beadId, edgeId } = move.payload ?? {};
+    // Must specify exactly one target
+    if ((beadId ? 1 : 0) + (edgeId ? 1 : 0) !== 1)
+      return { ok: false, error: "Specify beadId or edgeId" };
+    if (beadId) {
+      if (!state.beads[beadId]) return { ok: false, error: "Bead not found" };
+    } else if (edgeId) {
+      if (!state.edges[edgeId]) return { ok: false, error: "Edge not found" };
+    }
+    return { ok: true };
+  }
+
   return { ok: true }; // other move types are treated as valid for now
 }
 /**
@@ -195,6 +208,22 @@ export function applyMove(state: GameState, move: Move): void {
 /** Apply a move and deduct resource costs from the acting player. */
 export function applyMoveWithResources(state: GameState, move: Move): void {
   applyMove(state, move);
+  if (move.type === "prune") {
+    const { beadId, edgeId } = move.payload ?? {};
+    if (edgeId && state.edges[edgeId]) {
+      delete state.edges[edgeId];
+    }
+    if (beadId && state.beads[beadId]) {
+      delete state.beads[beadId];
+      // Remove edges connected to this bead
+      for (const id of Object.keys(state.edges)) {
+        const e = state.edges[id];
+        if (e.from === beadId || e.to === beadId) {
+          delete state.edges[id];
+        }
+      }
+    }
+  }
   const player = state.players.find((p) => p.id === move.playerId);
   if (!player) return;
   const cost = MOVE_COSTS[move.type] ?? {};

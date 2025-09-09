@@ -135,6 +135,48 @@ export default function App() {
     }
   };
 
+  const pruneBead = async (beadId: string) => {
+    if (!playerId || !state) return;
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "prune",
+      payload: { beadId },
+      timestamp: Date.now(),
+      durationMs: 500,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+    } catch (err) {
+      console.error("Failed to prune bead", err);
+    }
+  };
+
+  const pruneEdge = async (edgeId: string) => {
+    if (!playerId || !state) return;
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "prune",
+      payload: { edgeId },
+      timestamp: Date.now(),
+      durationMs: 500,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+    } catch (err) {
+      console.error("Failed to prune edge", err);
+    }
+  };
+
   const suggestBead = async () => {
     if (!state || !playerId) return;
     try {
@@ -259,8 +301,23 @@ export default function App() {
                       selected.includes(b.id) ? "ring-2 ring-indigo-500" : ""
                     }`}
                   >
-                    <div className="text-sm font-semibold">{b.title || b.id}</div>
-                    <div className="text-xs opacity-70">{b.modality} · by {b.ownerId}</div>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="text-sm font-semibold">{b.title || b.id}</div>
+                        <div className="text-xs opacity-70">{b.modality} · by {b.ownerId}</div>
+                      </div>
+                      {isMyTurn && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            pruneBead(b.id);
+                          }}
+                          className="text-xs text-red-400 hover:text-red-200"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
                     <div className="text-xs mt-1 opacity-80">{tryParseMarkdown(b.content)}</div>
                   </li>
                 ))}
@@ -271,8 +328,18 @@ export default function App() {
               <ul className="mt-2 space-y-2">
                 {Object.values(state.edges).map((e) => (
                   <li key={e.id} className="p-3 rounded bg-zinc-900 text-xs">
-                    <div className="opacity-80">
-                      <b>{e.label}</b>: {e.from} → {e.to}
+                    <div className="flex justify-between">
+                      <div className="opacity-80">
+                        <b>{e.label}</b>: {e.from} → {e.to}
+                      </div>
+                      {isMyTurn && (
+                        <button
+                          onClick={() => pruneEdge(e.id)}
+                          className="text-red-400 hover:text-red-200"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
                     <div className="opacity-60 mt-1">{e.justification}</div>
                   </li>
