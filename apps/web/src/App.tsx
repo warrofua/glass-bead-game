@@ -97,28 +97,39 @@ export default function App() {
     }
   };
 
-  const bindFirstTwo = async () => {
-    if (!playerId || !state) return;
-    const beads = Object.values(state.beads);
-    if (beads.length < 2) return;
-    const [a, b] = beads.slice(0, 2);
+  const [selected, setSelected] = useState<string[]>([]);
+
+  const toggleSelect = (id: string) => {
+    setSelected(sel => {
+      if (sel.includes(id)) return sel.filter(s => s !== id);
+      if (sel.length === 2) return [sel[1], id];
+      return [...sel, id];
+    });
+  };
+
+  const bindSelected = async () => {
+    if (!playerId || !state || selected.length !== 2) return;
+    const [from, to] = selected;
     const move: Move = {
       id: `m_${Math.random().toString(36).slice(2,8)}`,
       playerId,
       type: "bind",
       payload: {
-        from: a.id, to: b.id, label: "analogy",
-        justification: "Two features align; one disanalogy is noted."
+        from,
+        to,
+        label: "analogy",
+        justification: "Two features align; one disanalogy is noted.",
       },
       timestamp: Date.now(),
       durationMs: 800,
-      valid: true
+      valid: true,
     };
     try {
       await api(`/match/${state.id}/move`, {
         method: "POST",
-        body: JSON.stringify(move)
+        body: JSON.stringify(move),
       });
+      setSelected([]);
     } catch (err) {
       console.error("Failed to bind beads", err);
     }
@@ -217,7 +228,13 @@ export default function App() {
           >
             Cast Bead
           </button>
-          <button onClick={bindFirstTwo} disabled={!isMyTurn} className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">Bind First Two</button>
+          <button
+            onClick={bindSelected}
+            disabled={!isMyTurn || selected.length !== 2}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Bind Selected
+          </button>
           <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
           <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>
         </div>
@@ -233,7 +250,15 @@ export default function App() {
               <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Beads</h3>
               <ul className="mt-2 space-y-2">
                 {Object.values(state.beads).map((b) => (
-                  <li key={b.id} className="p-3 rounded bg-zinc-900">
+                  <li
+                    key={b.id}
+                    data-testid={`bead-${b.id}`}
+                    onClick={() => toggleSelect(b.id)}
+                    aria-selected={selected.includes(b.id)}
+                    className={`p-3 rounded bg-zinc-900 cursor-pointer ${
+                      selected.includes(b.id) ? "ring-2 ring-indigo-500" : ""
+                    }`}
+                  >
                     <div className="text-sm font-semibold">{b.title || b.id}</div>
                     <div className="text-xs opacity-70">{b.modality} · by {b.ownerId}</div>
                     <div className="text-xs mt-1 opacity-80">{tryParseMarkdown(b.content)}</div>
