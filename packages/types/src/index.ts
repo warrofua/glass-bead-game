@@ -201,21 +201,13 @@ export function applyMove(state: GameState, move: Move): void {
     const id = edgeId ?? move.id;
     const edge: Edge = { id, from, to, label, justification };
     state.edges[id] = edge;
-  }
-  state.updatedAt = move.timestamp;
-}
-
-/** Apply a move and deduct resource costs from the acting player. */
-export function applyMoveWithResources(state: GameState, move: Move): void {
-  applyMove(state, move);
-  if (move.type === "prune") {
+  } else if (move.type === "prune") {
     const { beadId, edgeId } = move.payload ?? {};
     if (edgeId && state.edges[edgeId]) {
       delete state.edges[edgeId];
     }
     if (beadId && state.beads[beadId]) {
       delete state.beads[beadId];
-      // Remove edges connected to this bead
       for (const id of Object.keys(state.edges)) {
         const e = state.edges[id];
         if (e.from === beadId || e.to === beadId) {
@@ -224,6 +216,12 @@ export function applyMoveWithResources(state: GameState, move: Move): void {
       }
     }
   }
+  state.updatedAt = move.timestamp;
+}
+
+/** Apply a move and deduct resource costs from the acting player. */
+export function applyMoveWithResources(state: GameState, move: Move): void {
+  applyMove(state, move);
   const player = state.players.find((p) => p.id === move.playerId);
   if (!player) return;
   const cost = MOVE_COSTS[move.type] ?? {};
