@@ -12,6 +12,7 @@ import {
 } from "@gbg/types";
 import registerMoveRoute from "./routes/move.js";
 import judge from "./judge/index.js";
+import judgeWithLLM from "./judge/llm.js";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -119,7 +120,8 @@ fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) 
   const id = req.params.id;
   const state = matches.get(id);
   if(!state) return reply.code(404).send({ error: "No such match" });
-  const scroll = judge(state);
+  const useLlm = !!process.env.LLM_MODEL;
+  const scroll = useLlm ? await judgeWithLLM(state) : judge(state);
   broadcast(id, "end:judgment", scroll);
   return reply.send(scroll);
 });

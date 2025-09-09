@@ -13,7 +13,8 @@
     "uuid": "^9.0.1",
     "ws": "^8.18.0",
     "zod": "^3.23.8",
-    "@gbg/types": "file:../../packages/types"
+    "@gbg/types": "file:../../packages/types",
+    "ollama": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^24.3.1",
