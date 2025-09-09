@@ -95,8 +95,14 @@ export function maxWeightedPathFrom(
  *
  * Node weight is derived from bead complexity and edge weight defaults to 0.
  */
-export function findStrongestPaths(state: GraphState, topN = 3): PathWeight[] {
+export function findStrongestPaths(
+  state: GraphState,
+  topN = 3,
+  opts: { maxDepth?: number; maxVisits?: number } = {}
+): PathWeight[] {
+  const { maxDepth = 10, maxVisits = 1_000 } = opts;
   const results: PathWeight[] = [];
+  let visits = 0;
 
   const visit = (
     nodeId: string,
@@ -105,6 +111,11 @@ export function findStrongestPaths(state: GraphState, topN = 3): PathWeight[] {
     weight: number,
     steps: Array<{ from: string; to: string; weight: number }>
   ) => {
+    if (visits >= maxVisits || path.length >= maxDepth) {
+      results.push({ nodes: [...path], weight, steps: [...steps] });
+      return;
+    }
+    visits++;
     visited.add(nodeId);
     path.push(nodeId);
     const nodeWeight = state.beads[nodeId]?.complexity ?? 0;
@@ -114,6 +125,7 @@ export function findStrongestPaths(state: GraphState, topN = 3): PathWeight[] {
       results.push({ nodes: [...path], weight, steps: [...steps] });
     } else {
       for (const edgeId of edgeIds) {
+        if (visits >= maxVisits) break;
         const edge = state.edges[edgeId];
         if (!edge || visited.has(edge.to)) continue;
         const stepWeight = 0; // no intrinsic edge weight
@@ -128,6 +140,7 @@ export function findStrongestPaths(state: GraphState, topN = 3): PathWeight[] {
   };
 
   for (const id of Object.keys(state.beads)) {
+    if (visits >= maxVisits) break;
     visit(id, new Set(), [], 0, []);
   }
 
