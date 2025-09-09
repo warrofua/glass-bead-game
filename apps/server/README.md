@@ -32,3 +32,11 @@ npm --workspace apps/server run typecheck
 ```
 
 The server stores everything in memory; restarting clears active matches.
+
+## Testing
+
+```bash
+npm --workspace apps/server run test
+```
+
+Run the server's test suite.
