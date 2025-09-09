@@ -36,7 +36,7 @@ export function judge(state: GameState): JudgmentScroll {
   const graph: GraphState = { beads: {}, edges: {}, outbound: {}, inbound: {} };
   for (const bead of Object.values(state.beads)) addBead(graph, bead);
   for (const edge of Object.values(state.edges)) addEdge(graph, edge);
-  const strongPaths = findStrongestPaths(graph, 3).map(p => ({
+  const strongPaths = findStrongestPaths(graph, 3, { maxDepth: 8, maxVisits: 1_000 }).map(p => ({
     nodes: p.nodes,
     why: `weight ${p.weight.toFixed(2)}`
   }));
