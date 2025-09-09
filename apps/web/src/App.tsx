@@ -25,6 +25,8 @@ export default function App() {
   const [scroll, setScroll] = useState<JudgmentScroll | null>(null);
   const [selectedPath, setSelectedPath] = useState<number>(0);
   const [beadText, setBeadText] = useState("");
+  const [cathedralText, setCathedralText] = useState("");
+  const [cathedralRefs, setCathedralRefs] = useState("");
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
@@ -179,6 +181,24 @@ export default function App() {
     }
   };
 
+  const submitCathedral = async () => {
+    if (!state || !playerId || !cathedralText.trim()) return;
+    const references = cathedralRefs
+      .split(/[,\s]+/)
+      .map((r) => r.trim())
+      .filter(Boolean);
+    try {
+      await api(`/match/${state.id}/cathedral`, {
+        method: "POST",
+        body: JSON.stringify({ playerId, content: cathedralText, references }),
+      });
+      setCathedralText("");
+      setCathedralRefs("");
+    } catch (err) {
+      console.error("Failed to submit cathedral", err);
+    }
+  };
+
   const drawTwist = async () => {
     if (!state) return;
     try {
@@ -309,6 +329,28 @@ export default function App() {
           <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
           <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>
         </div>
+        <div className="pt-4 space-y-2">
+          <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Cathedral</h2>
+          <textarea
+            value={cathedralText}
+            onChange={e => setCathedralText(e.target.value)}
+            className="w-full bg-zinc-900 rounded px-3 py-2 h-24"
+            placeholder="Final synthesis..."
+          />
+          <input
+            value={cathedralRefs}
+            onChange={e => setCathedralRefs(e.target.value)}
+            className="w-full bg-zinc-900 rounded px-3 py-2"
+            placeholder="Reference bead IDs (comma separated)"
+          />
+          <button
+            onClick={submitCathedral}
+            disabled={!isMyTurn || !cathedralText.trim()}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Submit Cathedral
+          </button>
+        </div>
         <p className="text-xs text-[var(--muted)] pt-4">MVP: cast text beads, bind, get a stub judgment.</p>
       </aside>
 
@@ -357,6 +399,13 @@ export default function App() {
               </div>
             </section>
           </div>
+        )}
+        {state?.cathedral && (
+          <section className="mt-6">
+            <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Cathedral</h3>
+            <div className="mt-2 text-sm">{tryParseMarkdown(state.cathedral.content)}</div>
+            <div className="text-xs mt-1 opacity-60">Refs: {state.cathedral.references.join(', ')}</div>
+          </section>
         )}
         {scroll && (
           <section className="mt-6">

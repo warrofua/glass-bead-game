@@ -51,6 +51,6 @@ export async function createMatchWithMoves(base: string){
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(move)
   });
-  return { matchId, bead, move };
+  return { matchId, bead, move, p1 };
 }
 

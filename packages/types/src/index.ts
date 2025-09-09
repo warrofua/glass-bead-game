@@ -28,7 +28,8 @@ export type MoveType =
   | "prune"
   | "mirror"
   | "counterpoint"
-  | "joker";
+  | "joker"
+  | "cathedral";
 export interface Move {
   id: string; playerId: string; type: MoveType; payload: any;
   timestamp: number; durationMs: number; valid: boolean; notes?: string;
@@ -116,7 +117,7 @@ export function validateSeed(seed: Seed): boolean {
 
 /**
  * Validate a move against a given game state. Currently supports basic rules for
- * `cast`, `bind`, `mirror`, and `counterpoint` moves.
+ * `cast`, `bind`, `mirror`, `counterpoint`, and `cathedral` moves.
  */
 export interface ValidationResult { ok: boolean; error?: string }
 
@@ -130,7 +131,8 @@ const MOVE_COSTS: Record<MoveType, { insight?: number; restraint?: number }> = {
   prune: { restraint: 1 },
   mirror: { insight: 1 },
   counterpoint: { insight: 1 },
-  joker: {}
+  joker: {},
+  cathedral: {},
 };
 
 export function validateMove(move: Move, state: GameState): ValidationResult {
@@ -207,11 +209,26 @@ export function validateMove(move: Move, state: GameState): ValidationResult {
     return { ok: true };
   }
 
+  if (move.type === "cathedral") {
+    const { content, references } = move.payload ?? {};
+    if (typeof content !== "string" || content.trim().length === 0)
+      return { ok: false, error: "Empty content" };
+    const clean = sanitizeMarkdown(content);
+    if (!Array.isArray(references)) return { ok: false, error: "Invalid references" };
+    for (const r of references) {
+      if (typeof r !== "string" || !state.beads[r])
+        return { ok: false, error: "Unknown reference" };
+    }
+    move.payload.content = clean;
+    move.payload.references = references;
+    return { ok: true };
+  }
+
   return { ok: true }; // other move types treated as valid
 }
 /**
  * Apply a move to mutate the given game state. Supports basic `cast`, `bind`, `mirror`,
- * and `counterpoint` moves.
+ * `counterpoint`, and `cathedral` moves.
  * Assumes the move has already been validated.
  */
 export function applyMove(state: GameState, move: Move): void {
@@ -226,6 +243,9 @@ export function applyMove(state: GameState, move: Move): void {
     const id = edgeId ?? move.id;
     const edge: Edge = { id, from, to, label, justification };
     state.edges[id] = edge;
+  } else if (move.type === "cathedral") {
+    const { content, references } = move.payload ?? {};
+    state.cathedral = { id: move.id, content, references };
   }
   state.updatedAt = move.timestamp;
 }

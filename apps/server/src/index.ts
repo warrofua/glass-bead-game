@@ -10,6 +10,8 @@ import {
   Move,
   sanitizeMarkdown,
   ConstraintCard,
+  validateMove,
+  applyMove,
 } from "@gbg/types";
 import registerMoveRoute from "./routes/move.js";
 import judge from "./judge/index.js";
@@ -153,6 +155,29 @@ fastify.post<{ Params: { id: string } }>("/match/:id/twist", async (req, reply) 
 });
 
 registerMoveRoute(fastify, { matches, broadcast, now, logMetrics });
+
+fastify.post<{ Params: { id: string } }>("/match/:id/cathedral", async (req, reply) => {
+  const id = req.params.id;
+  const state = matches.get(id);
+  if (!state) return reply.code(404).send({ error: "No such match" });
+  const { playerId, content, references } = (req.body as any) ?? {};
+  const move: Move = {
+    id: randomUUID().slice(0, 8),
+    playerId,
+    type: "cathedral",
+    payload: { content, references },
+    timestamp: now(),
+    durationMs: 0,
+    valid: true,
+  };
+  const validation = validateMove(move, state);
+  if (!validation.ok) return reply.code(400).send({ error: validation.error });
+  applyMove(state, move);
+  state.updatedAt = now();
+  broadcast(id, "move:accepted", move);
+  broadcast(id, "state:update", state);
+  return reply.send({ ok: true });
+});
 
 fastify.post<{ Params: { id: string } }>("/match/:id/ai", async (req, reply) => {
   const id = req.params.id;
