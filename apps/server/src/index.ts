@@ -13,6 +13,7 @@ import {
 import registerMoveRoute from "./routes/move.js";
 import judge from "./judge/index.js";
 import judgeWithLLM from "./judge/llm.js";
+import { Ollama } from "ollama";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -115,6 +116,28 @@ fastify.get<{ Params: { id: string } }>("/match/:id/log", async (req, reply) => 
 });
 
 registerMoveRoute(fastify, { matches, broadcast, now, logMetrics });
+
+fastify.post<{ Params: { id: string } }>("/match/:id/ai", async (req, reply) => {
+  const id = req.params.id;
+  const { playerId } = (req.body as any) ?? {};
+  const state = matches.get(id);
+  if (!state) return reply.code(404).send({ error: "No such match" });
+  const seed = state.seeds[0]?.text ?? "";
+  const last = [...state.moves].reverse().find((m) => m.playerId !== playerId && m.type === "cast");
+  const opponent = last?.payload?.bead?.content ?? "";
+  let suggestion = "";
+  try {
+    const model = process.env.LLM_MODEL || "qwen7b:latest";
+    const client = new Ollama();
+    const prompt = `Seed: ${seed}\nOpponent: ${opponent}\nRespond with a short bead idea:`;
+    for await (const part of client.generate(model, prompt)) {
+      suggestion += part;
+    }
+  } catch (err) {
+    console.warn("LLM suggest failed", err);
+  }
+  return reply.send({ suggestion: sanitizeMarkdown(suggestion.trim()) });
+});
 
 fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) => {
   const id = req.params.id;

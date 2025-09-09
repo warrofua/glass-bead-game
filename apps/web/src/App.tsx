@@ -136,6 +136,20 @@ export default function App() {
     }
   };
 
+  const suggestBead = async () => {
+    if (!state || !playerId) return;
+    try {
+      const res = await api(`/match/${state.id}/ai`, {
+        method: "POST",
+        body: JSON.stringify({ playerId }),
+      });
+      const data = await res.json();
+      if (data?.suggestion) setBeadText(data.suggestion);
+    } catch (err) {
+      console.error("Failed to get suggestion", err);
+    }
+  };
+
   const requestJudgment = async () => {
     if (!state) return;
     try {
@@ -201,6 +215,13 @@ export default function App() {
             className="w-full bg-zinc-900 rounded px-3 py-2 h-24"
             placeholder="Share an idea..."
           />
+          <button
+            onClick={suggestBead}
+            disabled={!isMyTurn}
+            className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Suggest with AI
+          </button>
           <button
             onClick={castBead}
             disabled={!beadText.trim() || !isMyTurn}
