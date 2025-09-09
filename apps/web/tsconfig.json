@@ -6,7 +6,9 @@
       "@gbg/types": ["../../packages/types/src"]
     },
     "jsx": "react-jsx",
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "outDir": "dist",
+    "noEmit": false
   },
   "include": ["src", "vite-env.d.ts"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx"]
