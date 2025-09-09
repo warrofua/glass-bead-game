@@ -27,8 +27,9 @@ export async function judgeWithLLM(state: GameState): Promise<JudgmentScroll> {
       `Respond ONLY with JSON {"winner":"<playerId>"}`;
 
     let output = '';
-    for await (const part of client.generate(model, prompt)) {
-      output += part;
+    const stream = await client.generate({ model, prompt, stream: true });
+    for await (const part of stream) {
+      output += part.response;
     }
     const parsed = JSON.parse(output);
     if (typeof parsed.winner === 'string' && baseline.scores[parsed.winner]) {
