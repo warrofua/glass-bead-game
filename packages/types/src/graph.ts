@@ -112,7 +112,9 @@ export function findStrongestPaths(
     steps: Array<{ from: string; to: string; weight: number }>
   ) => {
     if (visits >= maxVisits || path.length >= maxDepth) {
+      const lastStep = steps.pop();
       results.push({ nodes: [...path], weight, steps: [...steps] });
+      if (lastStep) steps.push(lastStep);
       return;
     }
     visits++;
