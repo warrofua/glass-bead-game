@@ -22,7 +22,8 @@ function waitForMessage(ws: WebSocket, type: string): Promise<any> {
 }
 
 test('counterpoint move broadcasts and rejects invalid label', async (t) => {
-  const port = 9998;
+  // Use a dedicated port to prevent collisions with other tests
+  const port = 10000;
   const server = await startServer(port);
   t.after(() => server.kill());
   const base = `http://127.0.0.1:${port}`;
