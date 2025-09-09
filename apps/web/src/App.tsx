@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { GameState, Bead, Move, JudgmentScroll } from "@gbg/types";
+import GraphView from "./GraphView";
 
 type WsMsg = { type: string; payload: any };
 
@@ -244,6 +245,12 @@ export default function App() {
                   </li>
                 ))}
               </ul>
+            </section>
+            <section className="lg:col-span-2">
+              <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Graph</h3>
+              <div className="mt-2">
+                <GraphView matchId={matchId} strongPaths={scroll?.strongPaths} width={600} height={400} />
+              </div>
             </section>
           </div>
         )}
