@@ -16,7 +16,10 @@ const mockState = {
   players: [{ id: 'player1', handle: 'Alice', resources: { insight: 0, restraint: 0, wildAvailable: true } }],
   currentPlayerId: 'player1',
   seeds: [{ id: 's1', text: 'Seed 1', domain: 'd1' }],
-  beads: {},
+  beads: {
+    b1: { id: 'b1', ownerId: 'player1', modality: 'text', title: 'Idea 1', content: 'One', complexity: 1, createdAt: 0, seedId: 's1' },
+    b2: { id: 'b2', ownerId: 'player1', modality: 'text', title: 'Idea 2', content: 'Two', complexity: 1, createdAt: 0, seedId: 's1' },
+  },
   edges: {},
   moves: [],
   createdAt: 0,
@@ -79,5 +82,47 @@ describe('App', () => {
         expect.objectContaining({ method: 'POST' })
       );
     });
+  });
+
+  it('binds two selected beads and resets selection', async () => {
+    render(<App />);
+
+    fireEvent.change(screen.getByPlaceholderText('e.g., MagisterRex'), {
+      target: { value: 'Alice' },
+    });
+
+    fireEvent.click(screen.getByText('Create'));
+    await screen.findByText(/Seed 1/);
+
+    fireEvent.click(screen.getByText('Join'));
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining(`/match/${mockState.id}/join`),
+        expect.any(Object)
+      );
+    });
+
+    const bead1 = await screen.findByTestId('bead-b1');
+    const bead2 = screen.getByTestId('bead-b2');
+
+    fireEvent.click(bead1);
+    fireEvent.click(bead2);
+
+    const bindButton = screen.getByRole('button', { name: 'Bind Selected' });
+    fireEvent.click(bindButton);
+
+    await waitFor(() => {
+      const moveCall = (global.fetch as jest.Mock).mock.calls.find(c =>
+        (c[0] as string).includes('/move')
+      );
+      expect(moveCall).toBeTruthy();
+      const body = JSON.parse(moveCall![1].body as string);
+      expect(body.payload.from).toBe('b1');
+      expect(body.payload.to).toBe('b2');
+    });
+
+    await waitFor(() => expect(bindButton).toBeDisabled());
+    expect(bead1).not.toHaveAttribute('aria-selected', 'true');
+    expect(bead2).not.toHaveAttribute('aria-selected', 'true');
   });
 });
