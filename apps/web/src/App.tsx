@@ -26,6 +26,7 @@ export default function App() {
   const [scroll, setScroll] = useState<JudgmentScroll | null>(null);
   const [beadText, setBeadText] = useState("");
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
+  const [isReplay, setIsReplay] = useState(false);
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
   const [view, setView] = useState<"game" | "gallery">("game");
@@ -38,6 +39,7 @@ export default function App() {
     setState(state);
     setScroll(sc);
     setView("game");
+    setIsReplay(true);
   };
 
   const createMatch = async () => {
@@ -50,6 +52,7 @@ export default function App() {
       }
       setMatchId(data.id);
       setState(data);
+      setIsReplay(false);
       connect(data.id);
     } catch (err) {
       console.error("Failed to create match", err);
@@ -58,6 +61,7 @@ export default function App() {
 
   const joinMatch = async () => {
     if (!matchId || !handle) return;
+    setIsReplay(false);
     connect(matchId);
     try {
       const res = await api(`/match/${matchId}/join`, {
@@ -296,7 +300,13 @@ export default function App() {
             <section className="lg:col-span-2">
               <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Graph</h3>
               <div className="mt-2">
-                <GraphView matchId={matchId} strongPaths={scroll?.strongPaths} width={600} height={400} />
+                <GraphView
+                  matchId={isReplay ? undefined : matchId}
+                  initialState={state || undefined}
+                  strongPaths={scroll?.strongPaths}
+                  width={600}
+                  height={400}
+                />
               </div>
             </section>
           </div>
