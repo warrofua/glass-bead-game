@@ -98,6 +98,7 @@ export function maxWeightedPathFrom(
 export function findStrongestPaths(
   state: GraphState,
   topN = 3,
+  // traversal limits
   opts: { maxDepth?: number; maxVisits?: number } = {}
 ): PathWeight[] {
   const { maxDepth = 10, maxVisits = 1_000 } = opts;
