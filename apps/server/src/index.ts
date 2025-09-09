@@ -12,6 +12,7 @@ import {
   ConstraintCard,
 } from "@gbg/types";
 import registerMoveRoute from "./routes/move.js";
+import registerConcordRoute from "./routes/concord.js";
 import judge from "./judge/index.js";
 import judgeWithLLM from "./judge/llm.js";
 import { Ollama } from "ollama";
@@ -153,6 +154,7 @@ fastify.post<{ Params: { id: string } }>("/match/:id/twist", async (req, reply) 
 });
 
 registerMoveRoute(fastify, { matches, broadcast, now, logMetrics });
+registerConcordRoute(fastify, { matches, broadcast, now });
 
 fastify.post<{ Params: { id: string } }>("/match/:id/ai", async (req, reply) => {
   const id = req.params.id;

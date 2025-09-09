@@ -44,6 +44,16 @@ export default function GraphView({
       source: e.from,
       target: e.to,
     }));
+    if (state.cathedral) {
+      nodes.push({ id: state.cathedral.id, fx: width / 2, fy: 40 });
+      for (const ref of state.cathedral.references) {
+        links.push({
+          id: `${state.cathedral.id}-${ref}`,
+          source: state.cathedral.id,
+          target: ref,
+        });
+      }
+    }
 
     const simulation = d3
       .forceSimulation<Node>(nodes)
@@ -75,8 +85,11 @@ export default function GraphView({
       .data(nodes)
       .enter()
       .append("circle")
+      .attr("id", (d) => d.id)
       .attr("r", 10)
-      .attr("fill", "#4f46e5");
+      .attr("fill", (d) =>
+        state.cathedral && d.id === state.cathedral.id ? "#fbbf24" : "#4f46e5"
+      );
 
     const drag = d3
       .drag<SVGCircleElement, Node>()
@@ -124,7 +137,13 @@ export default function GraphView({
       }
       const getId = (n: string | number | Node) =>
         typeof n === "string" || typeof n === "number" ? String(n) : n.id;
-      node.attr("fill", (d) => (nodeSet.has(d.id) ? "#ef4444" : "#4f46e5"));
+      node.attr("fill", (d) =>
+        nodeSet.has(d.id)
+          ? "#ef4444"
+          : state.cathedral && d.id === state.cathedral.id
+          ? "#fbbf24"
+          : "#4f46e5"
+      );
       link
         .attr("stroke", (d) =>
           edgeSet.has(`${getId(d.source)}|${getId(d.target)}`) ? "#ef4444" : "#888"
