@@ -5,7 +5,7 @@ import { startServer, createMatchWithMoves } from './server.helper.js';
 // ensure cathedral route stores final node
 
 test('cathedral route stores final node', async (t) => {
-  const port = 9994;
+  const port = 9997;
   const server = await startServer(port);
   t.after(() => server.kill());
   const base = `http://127.0.0.1:${port}`;
