@@ -8,6 +8,7 @@ import {
   neighbors,
   longestPathFrom,
   maxWeightedPathFrom,
+  computeLift,
 } from '../src/graph.ts';
 import type { Bead, Edge } from '../src/index.ts';
 
@@ -59,4 +60,23 @@ test('longest and weighted path search', () => {
   const weighted = maxWeightedPathFrom(state, 'a', weightFn);
   assert.deepEqual(weighted.path, ['a', 'b', 'c']);
   assert.equal(weighted.weight, 7);
+});
+
+test('computeLift aggregates path weights and normalizes', () => {
+  const state: GraphState = { beads: {}, edges: {}, outbound: {}, inbound: {} };
+  const beads: Bead[] = ['a', 'b', 'c'].map((id) => ({
+    id,
+    ownerId: 'p',
+    modality: 'text',
+    content: '',
+    complexity: 1,
+    createdAt: 0,
+  }));
+  beads.forEach((b) => addBead(state, b));
+
+  addEdge(state, { id: 'e1', from: 'a', to: 'b', label: 'analogy', justification: '' });
+  addEdge(state, { id: 'e2', from: 'b', to: 'c', label: 'analogy', justification: '' });
+
+  const lift = computeLift(state);
+  assert.deepEqual(lift, { a: 0.75, b: 1, c: 0.75 });
 });

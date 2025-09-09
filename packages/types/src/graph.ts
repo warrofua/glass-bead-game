@@ -148,3 +148,29 @@ export function findStrongestPaths(
   return results.slice(0, topN);
 }
 
+/**
+ * Compute a lift score for each bead based on the cumulative weights of all
+ * simple paths it participates in. Scores are normalized to the range [0,1].
+ */
+export function computeLift(state: GraphState): Record<string, number> {
+  const scores: Record<string, number> = {};
+
+  // initialize all bead scores to 0 so isolated beads are represented
+  for (const id of Object.keys(state.beads)) scores[id] = 0;
+
+  const paths = findStrongestPaths(state, Infinity);
+  for (const path of paths) {
+    for (const nodeId of path.nodes) {
+      scores[nodeId] = (scores[nodeId] ?? 0) + path.weight;
+    }
+  }
+
+  const max = Math.max(0, ...Object.values(scores));
+  if (max > 0) {
+    for (const id of Object.keys(scores)) {
+      scores[id] = scores[id] / max;
+    }
+  }
+  return scores;
+}
+
