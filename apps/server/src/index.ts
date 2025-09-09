@@ -9,6 +9,7 @@ import {
   Player,
   Move,
   sanitizeMarkdown,
+  ConstraintCard,
 } from "@gbg/types";
 import registerMoveRoute from "./routes/move.js";
 import judge from "./judge/index.js";
@@ -32,6 +33,29 @@ function sampleSeeds(): GameState["seeds"]{
     {id:"s3", text:"Amnesty", domain:"civics"}
   ];
   return seeds;
+}
+
+function sampleTwists(): ConstraintCard[]{
+  return [
+    {
+      id: 't1',
+      name: 'Text Only',
+      description: 'Only text beads allowed',
+      effect: { modalityLock: ['text'] }
+    },
+    {
+      id: 't2',
+      name: 'Motif Echo',
+      description: 'Relations must be motif-echo',
+      effect: { requiredRelation: 'motif-echo' }
+    },
+    {
+      id: 't3',
+      name: 'Short Justification',
+      description: 'Justifications capped at 40 chars',
+      effect: { justificationLimit: 40 }
+    }
+  ];
 }
 function broadcast(matchId: string, type: string, payload: any){
   const set = sockets.get(matchId); if(!set) return;
@@ -74,7 +98,7 @@ fastify.post("/match", async (req, reply) => {
   const id = randomUUID().slice(0,8);
   const state: GameState = {
     id, round: 1, phase:"SeedDraw", players: [], currentPlayerId: undefined, seeds: sampleSeeds(),
-    beads: {}, edges: {}, moves: [], createdAt: now(), updatedAt: now()
+    beads: {}, edges: {}, moves: [], twistDeck: sampleTwists(), createdAt: now(), updatedAt: now()
   };
   matches.set(id, state);
   return reply.send(state);
@@ -113,6 +137,18 @@ fastify.get<{ Params: { id: string } }>("/match/:id/log", async (req, reply) => 
     .header("Content-Type", "application/json")
     .header("Content-Disposition", `attachment; filename=match-${state.id}.json`);
   return reply.send(state);
+});
+
+fastify.post<{ Params: { id: string } }>("/match/:id/twist", async (req, reply) => {
+  const id = req.params.id;
+  const state = matches.get(id);
+  if(!state) return reply.code(404).send({ error: "No such match" });
+  const next = state.twistDeck?.shift();
+  if(!next) return reply.code(400).send({ error: "No twists remaining" });
+  state.twist = next;
+  state.updatedAt = now();
+  broadcast(id, "state:update", state);
+  return reply.send(next);
 });
 
 registerMoveRoute(fastify, { matches, broadcast, now, logMetrics });
