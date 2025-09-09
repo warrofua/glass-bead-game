@@ -36,3 +36,14 @@ test('renders nodes/edges and highlights strong paths', () => {
   expect(edge.getAttribute('stroke')).toBe('#ef4444');
   expect(edge.getAttribute('stroke-width')).toBe('3');
 });
+
+test('renders cathedral node when present', () => {
+  const catState: GameState = {
+    ...state,
+    cathedral: { id: 'cat', content: 'summary', references: ['a', 'b'] },
+  };
+  const { container } = render(<GraphView initialState={catState} width={200} height={200} />);
+  const cathedralNode = container.querySelector('#cat');
+  expect(cathedralNode).not.toBeNull();
+  expect(cathedralNode?.getAttribute('fill')).toBe('#fbbf24');
+});
