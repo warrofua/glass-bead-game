@@ -22,5 +22,26 @@ describe('Ladder', () => {
       expect(screen.getByText(/#2 Bob/)).toBeInTheDocument();
     });
   });
+
+  it('shows empty message when no standings', async () => {
+    (global.fetch as any) = jest.fn(() =>
+      Promise.resolve({ ok: true, json: async () => [] })
+    );
+    render(<Ladder />);
+    await waitFor(() => {
+      expect(screen.getByText(/No standings yet/)).toBeInTheDocument();
+    });
+  });
+
+  it('handles fetch failure gracefully', async () => {
+    (global.fetch as any) = jest.fn(() => Promise.reject(new Error('fail')));
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    render(<Ladder />);
+    await waitFor(() => {
+      expect(warn).toHaveBeenCalled();
+      expect(screen.getByText(/No standings yet/)).toBeInTheDocument();
+    });
+    warn.mockRestore();
+  });
 });
 
