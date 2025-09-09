@@ -23,6 +23,7 @@ export default function App() {
   const [handle, setHandle] = useState<string>(() => localStorage.getItem("handle") || "");
   const [playerId, setPlayerId] = useState<string>("");
   const [scroll, setScroll] = useState<JudgmentScroll | null>(null);
+  const [selectedPath, setSelectedPath] = useState<number>(0);
   const [beadText, setBeadText] = useState("");
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
@@ -207,6 +208,7 @@ export default function App() {
       const res = await api(`/match/${state.id}/judge`, { method: "POST" });
       const data = (await res.json()) as JudgmentScroll;
       setScroll(data);
+      setSelectedPath(0);
     } catch (err) {
       console.error("Failed to request judgment", err);
     }
@@ -351,7 +353,7 @@ export default function App() {
             <section className="lg:col-span-2">
               <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Graph</h3>
               <div className="mt-2">
-                <GraphView matchId={matchId} strongPaths={scroll?.strongPaths} width={600} height={400} />
+                <GraphView matchId={matchId} strongPaths={scroll?.strongPaths} selectedPathIndex={selectedPath} width={600} height={400} />
               </div>
             </section>
           </div>
@@ -359,16 +361,36 @@ export default function App() {
         {scroll && (
           <section className="mt-6">
             <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Judgment</h3>
-            <div className="mt-2 text-sm">
-              <div className="mb-2">Winner: {scroll.winner || "TBD"}</div>
-              <ul className="space-y-1">
-                {Object.entries(scroll.scores).map(([pid, s]) => (
-                  <li key={pid} className="text-xs">
-                    <b>{pid}</b>: {(s.total * 100).toFixed(1)}% (res {s.resonance.toFixed(2)}, nov {s.novelty.toFixed(2)}, int {s.integrity.toFixed(2)})
-                  </li>
-                ))}
-              </ul>
-            </div>
+              <div className="mt-2 text-sm">
+                <div className="mb-2">Winner: {scroll.winner || "TBD"}</div>
+                <ul className="space-y-1">
+                  {Object.entries(scroll.scores).map(([pid, s]) => (
+                    <li key={pid} className="text-xs">
+                      <b>{pid}</b>: {(s.total * 100).toFixed(1)}% (res {s.resonance.toFixed(2)}, nov {s.novelty.toFixed(2)}, int {s.integrity.toFixed(2)}, aes {s.aesthetics.toFixed(2)}, res {s.resilience.toFixed(2)})
+                    </li>
+                  ))}
+                </ul>
+                {scroll.strongPaths.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-xs uppercase tracking-wide text-[var(--muted)]">Strong Paths</h4>
+                    <ul className="mt-1 space-y-1">
+                      {scroll.strongPaths.map((p, idx) => (
+                        <li key={idx}>
+                          <button onClick={() => setSelectedPath(idx)} className={`text-xs underline ${selectedPath === idx ? 'font-bold' : ''}`}>
+                            {p.nodes.join(' → ')} {p.why && `(${p.why})`}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {scroll.weakSpots.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-xs uppercase tracking-wide text-[var(--muted)]">Weak Spots</h4>
+                    <div className="text-xs">{scroll.weakSpots.join(', ')}</div>
+                  </div>
+                )}
+              </div>
           </section>
         )}
       </main>
