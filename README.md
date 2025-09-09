@@ -4,6 +4,7 @@ Two‑player, online, AI‑judged prototype. This MVP includes:
 - Realtime match state (in‑memory) via Fastify + WebSocket
 - Shared TypeScript types and validation utilities
 - Vite + React web client with Tailwind and a minimal graph‑like list
+- AI Suggest button powered by the `useMatchState` hook
 - JSON match log export (`GET /match/:id/log` or Export button in the UI)
 - A stub **Magister Ludi** judge that scores basic Resonance/Aesthetics
 
@@ -18,6 +19,7 @@ npm install
 npm run dev
 # web: http://localhost:5173  |  server: http://localhost:8787
 ```
+Or run `./start-dev.sh` to pull, install, build, and launch everything automatically.
 If `npm install` fails with `Unsupported URL Type "workspace:"`, replace any `workspace:*` entries in subpackage `package.json`
 files with relative `file:` links (e.g., `file:../../packages/types`).
 Open two browser windows, choose distinct handles, and join/create the same match ID.
@@ -39,6 +41,20 @@ NLI contradiction checks for Integrity, and shingle/LSH rarity for Novelty.
 - `npm run dev` — runs server + web concurrently
 - `npm run build` — builds both
 - `npm run typecheck` — type checks both
+
+## Testing
+Run all tests from the repo root:
+
+```bash
+npm test
+```
+
+Or target a workspace directly:
+
+```bash
+npm test --workspace apps/web
+npm test --workspace packages/types
+```
 
 ## Notes
 - Data is in‑memory (ephemeral). Suitable for local testing.
