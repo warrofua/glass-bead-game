@@ -3,8 +3,8 @@
 This report captures the development progression of the Glass Bead Game repository from its initial commit through the current state.
 
 ## Repository Summary
-- **Total commits:** 89
-- **Latest commit:** a18a0d6
+- **Total commits:** 109
+- **Latest commit:** 636eefe
 
 ## Development Timeline
 
@@ -41,6 +41,20 @@ This report captures the development progression of the Glass Bead Game reposito
 ### Advanced Capabilities
 - **02a7d61** – Added optional LLM-based judging via Ollama.
 - **953340b** – Integrated GraphView into the main game interface.
+
+### Testing Infrastructure
+- Implemented Jest with React Testing Library for frontend coverage.
+- Added server and unit tests to strengthen backend reliability.
+
+### Hooks and Features
+- Added `useMatchState` hook for real-time match updates.
+- Introduced AI suggestion button to propose moves.
+- Included sample moves to help users explore gameplay.
+
+### Bug Fixes
+- Fixed streaming generate call to prevent hanging responses.
+- Corrected an error at `index.ts` line 135.
+- Removed duplicate resonance entries.
 
 ## Current Status
 Development has progressed from foundational documentation to a feature-rich application with validation, metrics, dynamic visualisations, and experimental AI-assisted judging. The project remains active and continues to evolve.
