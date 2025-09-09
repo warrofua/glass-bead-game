@@ -7,6 +7,9 @@ Two‑player, online, AI‑judged prototype. This MVP includes:
 - AI Suggest button powered by the `useMatchState` hook
 - JSON match log export (`GET /match/:id/log` or Export button in the UI)
 - A stub **Magister Ludi** judge that scores basic Resonance/Aesthetics
+- Twist deck with counterpoint moves and global constraints
+- Player ratings with a ladder view and server endpoints
+- Concord route with Cathedral rendering and lift‑based GraphView
 
 ## Quickstart
 **Requirements:** Node 20+ (or 18+ with `--experimental-fetch`), npm 9+
