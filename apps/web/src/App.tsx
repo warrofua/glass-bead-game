@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import type { GameState, Bead, Move, JudgmentScroll } from "@gbg/types";
 import GraphView from "./GraphView";
 import useMatchState from "./hooks/useMatchState";
+import Gallery from "./Gallery";
 
 // Helper around fetch that only sets the JSON content type when a body is
 // present (Fastify returns 400 on an empty JSON body) and throws on HTTP
@@ -27,9 +28,17 @@ export default function App() {
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
+  const [view, setView] = useState<"game" | "gallery">("game");
 
   useEffect(() => { localStorage.setItem("matchId", matchId); }, [matchId]);
   useEffect(() => { localStorage.setItem("handle", handle); }, [handle]);
+
+  const handleReplayLoad = (id: string, state: GameState, sc: JudgmentScroll) => {
+    setMatchId(id);
+    setState(state);
+    setScroll(sc);
+    setView("game");
+  };
 
   const createMatch = async () => {
     try {
@@ -176,6 +185,10 @@ export default function App() {
     }
   };
 
+  if(view === "gallery"){
+    return <Gallery onLoad={handleReplayLoad} />;
+  }
+
   return (
     <div className="min-h-screen p-4 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
       <aside className="bg-[var(--panel)] rounded-2xl p-4 space-y-3 shadow">
@@ -188,6 +201,7 @@ export default function App() {
           <div className="flex gap-2 pt-2">
             <button onClick={createMatch} className="px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Create</button>
             <button onClick={joinMatch} className="px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Join</button>
+            <button onClick={() => setView("gallery")} className="px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Gallery</button>
           </div>
         </div>
         {state && (

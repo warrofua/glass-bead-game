@@ -8,12 +8,16 @@ import {
   GameState,
   Player,
   Move,
+  JudgmentScroll,
   sanitizeMarkdown,
 } from "@gbg/types";
 import registerMoveRoute from "./routes/move.js";
 import judge from "./judge/index.js";
 import judgeWithLLM from "./judge/llm.js";
 import { Ollama } from "ollama";
+import fs from "node:fs";
+import path from "node:path";
+import PDFDocument from "pdfkit";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -22,6 +26,39 @@ await fastify.register(cors, { origin: true });
 const matches = new Map<string, GameState>();
 const sockets = new Map<string, Set<WebSocket>>();
 const metrics = { wsSendFailures: 0, totalMoves: 0, latency: 0 };
+
+const REPLAY_DIR = path.join(process.cwd(), "replays");
+
+function saveReplay(state: GameState, scroll: JudgmentScroll){
+  const replay = {
+    id: state.id,
+    timestamp: state.createdAt,
+    players: state.players.map(p => ({ id: p.id, handle: p.handle })),
+    seeds: state.seeds,
+    moves: state.moves,
+    scroll
+  };
+  fs.mkdirSync(REPLAY_DIR, { recursive: true });
+  fs.writeFileSync(path.join(REPLAY_DIR, `${state.id}.json`), JSON.stringify(replay, null, 2));
+}
+
+function ensureScrollPdf(id: string, replay: any){
+  fs.mkdirSync(REPLAY_DIR, { recursive: true });
+  const pdfFile = path.join(REPLAY_DIR, `${id}.pdf`);
+  if(fs.existsSync(pdfFile)) return pdfFile;
+  const doc = new PDFDocument();
+  doc.pipe(fs.createWriteStream(pdfFile));
+  doc.fontSize(20).text("Judgment Scroll", { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12).text(`Winner: ${replay.scroll?.winner ?? ""}`);
+  doc.moveDown();
+  for(const [pid, scores] of Object.entries(replay.scroll?.scores || {})){
+    const player = replay.players.find((p: any) => p.id === pid);
+    doc.text(`${player?.handle || pid}: ${(scores as any).total?.toFixed(2)}`);
+  }
+  doc.end();
+  return pdfFile;
+}
 
 // --- Utility
 function now(){ return Date.now(); }
@@ -115,6 +152,39 @@ fastify.get<{ Params: { id: string } }>("/match/:id/log", async (req, reply) => 
   return reply.send(state);
 });
 
+fastify.get("/replays", async () => {
+  fs.mkdirSync(REPLAY_DIR, { recursive: true });
+  const files = fs.readdirSync(REPLAY_DIR).filter(f => f.endsWith(".json"));
+  const list = files.map(f => {
+    const data = JSON.parse(fs.readFileSync(path.join(REPLAY_DIR, f), "utf-8"));
+    return { id: data.id, timestamp: data.timestamp, players: data.players };
+  });
+  return list;
+});
+
+fastify.get<{ Params: { id: string } }>("/match/:id/replay", async (req, reply) => {
+  const file = path.join(REPLAY_DIR, `${req.params.id}.json`);
+  if(!fs.existsSync(file)) return reply.code(404).send({ error: "No replay" });
+  const replay = JSON.parse(fs.readFileSync(file, "utf-8"));
+  ensureScrollPdf(req.params.id, replay);
+  replay.pdf = `/match/${req.params.id}/replay.pdf`;
+  return reply.send(replay);
+});
+
+fastify.get<{ Params: { id: string } }>("/match/:id/replay.pdf", async (req, reply) => {
+  const file = path.join(REPLAY_DIR, `${req.params.id}.pdf`);
+  if(!fs.existsSync(file)){
+    const jsonFile = path.join(REPLAY_DIR, `${req.params.id}.json`);
+    if(fs.existsSync(jsonFile)){
+      const data = JSON.parse(fs.readFileSync(jsonFile, "utf-8"));
+      ensureScrollPdf(req.params.id, data);
+    }
+  }
+  if(!fs.existsSync(file)) return reply.code(404).send({ error: "No PDF" });
+  reply.header("Content-Type", "application/pdf");
+  return reply.send(fs.createReadStream(file));
+});
+
 registerMoveRoute(fastify, { matches, broadcast, now, logMetrics });
 
 fastify.post<{ Params: { id: string } }>("/match/:id/ai", async (req, reply) => {
@@ -145,6 +215,7 @@ fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) 
   if(!state) return reply.code(404).send({ error: "No such match" });
   const useLlm = !!process.env.LLM_MODEL;
   const scroll = useLlm ? await judgeWithLLM(state) : judge(state);
+  saveReplay(state, scroll);
   broadcast(id, "end:judgment", scroll);
   return reply.send(scroll);
 });
