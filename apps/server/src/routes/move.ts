@@ -45,6 +45,10 @@ export default function registerMoveRoute(
             move.payload.justification
           );
         }
+      } else if (move.type === "canonize") {
+        if (typeof move.payload?.content === "string") {
+          move.payload.content = sanitizeMarkdown(move.payload.content);
+        }
       }
       const validation = validateMove(move, state);
       if (!validation.ok) {

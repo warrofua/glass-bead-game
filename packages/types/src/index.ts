@@ -28,7 +28,22 @@ export interface ConstraintCard {
   id: string; name: string; description: string;
   effect?: { modalityLock?: Modality[]; requiredRelation?: RelationLabel; justificationLimit?: number };
 }
-export interface Cathedral { id: string; content: string; references: string[]; }
+export interface Reference {
+  /** id of the bead being referenced */
+  id: string;
+}
+
+export interface Cathedral {
+  id: string;
+  content: string;
+  references: Reference[];
+  createdAt: number;
+}
+
+/** Helper to create a reference to a bead */
+export function createReference(id: string): Reference {
+  return { id };
+}
 
 export interface GameState {
   id: string; round: 1|2|3|4; phase: string; players: Player[];
@@ -170,6 +185,19 @@ export function validateMove(move: Move, state: GameState): ValidationResult {
     return { ok: true };
   }
 
+  if (move.type === "canonize") {
+    const { content, references } = move.payload ?? {};
+    if (typeof content !== "string" || content.trim().length === 0)
+      return { ok: false, error: "Missing content" };
+    const clean = sanitizeMarkdown(content);
+    move.payload.content = clean;
+    if (!Array.isArray(references)) return { ok: false, error: "References required" };
+    for (const ref of references as Reference[]) {
+      if (!state.beads[ref.id]) return { ok: false, error: "Unknown reference" };
+    }
+    return { ok: true };
+  }
+
   return { ok: true }; // other move types are treated as valid for now
 }
 /**
@@ -188,6 +216,15 @@ export function applyMove(state: GameState, move: Move): void {
     const id = edgeId ?? move.id;
     const edge: Edge = { id, from, to, label, justification };
     state.edges[id] = edge;
+  } else if (move.type === "canonize") {
+    const { content, references } = move.payload ?? {};
+    const cathedral: Cathedral = {
+      id: move.payload?.id ?? move.id,
+      content,
+      references: (references as Reference[]) || [],
+      createdAt: move.timestamp,
+    };
+    state.cathedral = cathedral;
   }
   state.updatedAt = move.timestamp;
 }
@@ -228,4 +265,3 @@ export function replayMoves(initial: GameState, moves: Move[]): GameState {
   return state;
 }
 
-export * from './graph.js';

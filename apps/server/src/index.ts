@@ -74,7 +74,7 @@ fastify.post("/match", async (req, reply) => {
   const id = randomUUID().slice(0,8);
   const state: GameState = {
     id, round: 1, phase:"SeedDraw", players: [], currentPlayerId: undefined, seeds: sampleSeeds(),
-    beads: {}, edges: {}, moves: [], createdAt: now(), updatedAt: now()
+    beads: {}, edges: {}, moves: [], cathedral: undefined, createdAt: now(), updatedAt: now()
   };
   matches.set(id, state);
   return reply.send(state);

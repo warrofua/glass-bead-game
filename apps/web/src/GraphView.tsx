@@ -5,6 +5,7 @@ import useMatchState from "./hooks/useMatchState";
 
 interface Node extends d3.SimulationNodeDatum {
   id: string;
+  type?: "bead" | "cathedral";
 }
 
 interface Link extends d3.SimulationLinkDatum<Node> {
@@ -38,12 +39,25 @@ export default function GraphView({
   // Render graph using d3 whenever state or selection changes
   useEffect(() => {
     if (!state) return;
-    const nodes: Node[] = Object.values(state.beads).map((b) => ({ id: b.id }));
+    const nodes: Node[] = Object.values(state.beads).map((b) => ({
+      id: b.id,
+      type: "bead",
+    }));
     const links: Link[] = Object.values(state.edges).map((e) => ({
       id: e.id,
       source: e.from,
       target: e.to,
     }));
+    if (state.cathedral) {
+      nodes.push({ id: state.cathedral.id, type: "cathedral" });
+      for (const ref of state.cathedral.references) {
+        links.push({
+          id: `cat-${ref.id}`,
+          source: ref.id,
+          target: state.cathedral.id,
+        });
+      }
+    }
 
     const simulation = d3
       .forceSimulation<Node>(nodes)
@@ -76,7 +90,9 @@ export default function GraphView({
       .enter()
       .append("circle")
       .attr("r", 10)
-      .attr("fill", "#4f46e5");
+      .attr("fill", (d) =>
+        d.type === "cathedral" ? "#f59e0b" : "#4f46e5"
+      );
 
     const drag = d3
       .drag<SVGCircleElement, Node>()

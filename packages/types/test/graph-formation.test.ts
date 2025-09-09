@@ -3,15 +3,12 @@ import assert from 'node:assert/strict';
 import {
   validateMove,
   applyMove,
-  addBead,
-  addEdge,
-  neighbors,
   type GameState,
   type Move,
   type Bead,
   type Edge,
-  GraphState,
 } from '../src/index.ts';
+import { addBead, addEdge, neighbors, GraphState } from '../src/graph.ts';
 
 function baseState(): GameState {
   return {

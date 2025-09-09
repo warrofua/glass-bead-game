@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import type { GameState, Bead, Move, JudgmentScroll } from "@gbg/types";
+import { createReference } from "@gbg/types";
 import GraphView from "./GraphView";
 import useMatchState from "./hooks/useMatchState";
 
@@ -24,6 +25,7 @@ export default function App() {
   const [playerId, setPlayerId] = useState<string>("");
   const [scroll, setScroll] = useState<JudgmentScroll | null>(null);
   const [beadText, setBeadText] = useState("");
+  const [cathedralText, setCathedralText] = useState("");
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
@@ -100,11 +102,9 @@ export default function App() {
   const [selected, setSelected] = useState<string[]>([]);
 
   const toggleSelect = (id: string) => {
-    setSelected(sel => {
-      if (sel.includes(id)) return sel.filter(s => s !== id);
-      if (sel.length === 2) return [sel[1], id];
-      return [...sel, id];
-    });
+    setSelected((sel) =>
+      sel.includes(id) ? sel.filter((s) => s !== id) : [...sel, id]
+    );
   };
 
   const bindSelected = async () => {
@@ -132,6 +132,34 @@ export default function App() {
       setSelected([]);
     } catch (err) {
       console.error("Failed to bind beads", err);
+    }
+  };
+
+  const canonize = async () => {
+    if (!playerId || !state) return;
+    const text = cathedralText.trim();
+    if (!text || selected.length === 0) return;
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2, 8)}`,
+      playerId,
+      type: "canonize",
+      payload: {
+        content: text,
+        references: selected.map((id) => createReference(id)),
+      },
+      timestamp: Date.now(),
+      durationMs: 1000,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+      setCathedralText("");
+      setSelected([]);
+    } catch (err) {
+      console.error("Failed to canonize", err);
     }
   };
 
@@ -234,6 +262,22 @@ export default function App() {
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Bind Selected
+          </button>
+        </div>
+        <div className="pt-4 space-y-2">
+          <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Canonize</h2>
+          <textarea
+            value={cathedralText}
+            onChange={(e) => setCathedralText(e.target.value)}
+            className="w-full bg-zinc-900 rounded px-3 py-2 h-24"
+            placeholder="Synthesize the weave..."
+          />
+          <button
+            onClick={canonize}
+            disabled={!isMyTurn || !cathedralText.trim() || selected.length === 0}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Canonize Cathedral
           </button>
           <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
           <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>

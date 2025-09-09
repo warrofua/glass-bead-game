@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { GraphState, addBead, addEdge, findStrongestPaths } from "../src/index.ts";
+import { GraphState, addBead, addEdge, findStrongestPaths } from "../src/graph.ts";
 import { score as resonanceScore } from "../../../apps/server/src/judge/resonance.ts";
 
 test("findStrongestPaths returns heaviest paths", () => {
