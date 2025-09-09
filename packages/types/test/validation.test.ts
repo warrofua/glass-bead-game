@@ -339,3 +339,53 @@ test('applyMoveWithResources deducts resources and uses wild', () => {
   assert.equal(state.players[1].resources.wildAvailable, false);
 });
 
+test('mirror move must change modality', () => {
+  const bead1: Bead = {
+    id: 'b1', ownerId: 'p1', modality: 'text', content: 'a', complexity: 1, createdAt: 0,
+  };
+  const state: GameState = {
+    id: 'g1', round: 1, phase: 'play',
+    players: [{ id: 'p1', handle: 'P1', resources: { insight: 1, restraint: 0, wildAvailable: false } }],
+    seeds: [], beads: { b1: bead1 }, edges: {}, moves: [], createdAt: 0, updatedAt: 0,
+  };
+
+  const sameMod: Move = {
+    id: 'm1', playerId: 'p1', type: 'mirror',
+    payload: { targetId: 'b1', bead: { id: 'b2', ownerId: 'p1', modality: 'text', content: 'b', complexity: 1, createdAt: 0 } },
+    timestamp: 1, durationMs: 0, valid: true,
+  };
+  assert.equal(validateMove(sameMod, state).ok, false);
+
+  const diffMod: Move = {
+    id: 'm2', playerId: 'p1', type: 'mirror',
+    payload: { targetId: 'b1', bead: { id: 'b3', ownerId: 'p1', modality: 'image', content: 'img', complexity: 1, createdAt: 0 } },
+    timestamp: 2, durationMs: 0, valid: true,
+  };
+  assert.equal(validateMove(diffMod, state).ok, true);
+});
+
+test('counterpoint respects twist relation', () => {
+  const bead1: Bead = { id: 'b1', ownerId: 'p1', modality: 'text', content: 'a', complexity: 1, createdAt: 0 };
+  const bead2: Bead = { id: 'b2', ownerId: 'p1', modality: 'image', content: 'b', complexity: 1, createdAt: 0 };
+  const state: GameState = {
+    id: 'g1', round: 1, phase: 'play',
+    players: [{ id: 'p1', handle: 'P1', resources: { insight: 1, restraint: 0, wildAvailable: false } }],
+    seeds: [], beads: { b1: bead1, b2: bead2 }, edges: {}, moves: [], createdAt: 0, updatedAt: 0,
+    twist: { id: 't1', name: 'R', description: 'require motif', effect: { requiredRelation: 'motif-echo' } },
+  };
+
+  const bad: Move = {
+    id: 'c1', playerId: 'p1', type: 'counterpoint',
+    payload: { from: 'b1', to: 'b2', label: 'analogy', justification: 'First. Second.' },
+    timestamp: 1, durationMs: 0, valid: true,
+  };
+  assert.equal(validateMove(bad, state).ok, false);
+
+  const good: Move = {
+    id: 'c2', playerId: 'p1', type: 'counterpoint',
+    payload: { from: 'b1', to: 'b2', label: 'motif-echo', justification: 'First. Second.' },
+    timestamp: 2, durationMs: 0, valid: true,
+  };
+  assert.equal(validateMove(good, state).ok, true);
+});
+
