@@ -5,7 +5,7 @@ import { startServer } from './server.helper.js';
 // Ensure server ratings endpoint aggregates standings correctly
 
 // Using unique port to avoid collisions
-const PORT = 9998;
+const PORT = 9997;
 
 test('ratings endpoint aggregates standings', async (t) => {
   const server = await startServer(PORT);
