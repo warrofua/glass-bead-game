@@ -1,24 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
-import { spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import path from 'node:path';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { startServer } from './server.helper.js';
 
 test('metrics endpoint reports move counts and latency', async (t) => {
-  const cwd = path.join(__dirname, '..');
-  const server = spawn('node', ['dist/index.js'], {
-    cwd,
-    env: { ...process.env, PORT: '9994' },
-    stdio: ['ignore', 'pipe', 'pipe']
-  });
-  await new Promise(res => setTimeout(res, 1000));
+  const { server, port } = await startServer();
   t.after(() => {
     server.kill();
   });
 
-  const base = 'http://127.0.0.1:9994';
+  const base = `http://127.0.0.1:${port}`;
 
   const matchRes = await fetch(`${base}/match`, { method: 'POST' });
   const match = await matchRes.json();

@@ -4,15 +4,12 @@ import { startServer } from './server.helper.js';
 
 // Ensure server ratings endpoint aggregates standings correctly
 
-// Using unique port to avoid collisions
-const PORT = 9997;
-
 test('ratings endpoint aggregates standings', async (t) => {
-  const server = await startServer(PORT);
+  const { server, port } = await startServer();
   t.after(() => {
     server.kill();
   });
-  const base = `http://127.0.0.1:${PORT}`;
+  const base = `http://127.0.0.1:${port}`;
 
   const post = (handle: string, result: 'win' | 'loss') =>
     fetch(`${base}/ratings`, {

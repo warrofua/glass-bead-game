@@ -5,8 +5,7 @@ import { startServer, createMatchWithMoves } from './server.helper.js';
 // Ensure we can download match log with moves and beads
 
 test('match log download contains moves and beads', async (t) => {
-  const port = 9995;
-  const server = await startServer(port);
+  const { server, port } = await startServer();
   t.after(() => server.kill());
   const base = `http://localhost:${port}`;
 
