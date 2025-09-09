@@ -1,4 +1,4 @@
-import { GameState, JudgedScores, JudgmentScroll } from '@gbg/types';
+import { GameState, JudgedScores, JudgmentScroll, GraphState, addBead, addEdge, findStrongestPaths } from '@gbg/types';
 import { score as resonance } from './resonance.js';
 import { score as novelty } from './novelty.js';
 import { score as integrity } from './integrity.js';
@@ -23,9 +23,9 @@ export function judge(state: GameState): JudgmentScroll {
       return owns;
     }).length;
     const slice = { beadCount, edgeCount };
-    const r = resonance(slice);
-    const n = novelty(slice);
-    const i = integrity(slice);
+    const r = resonance(state, p.id);
+    const n = novelty(state, p.id);
+    const i = integrity(state, p.id);
     const a = aesthetics(slice);
     const rs = resilience(slice);
     const total = WEIGHTS.resonance * r + WEIGHTS.novelty * n +
@@ -33,8 +33,19 @@ export function judge(state: GameState): JudgmentScroll {
     scores[p.id] = { resonance: r, novelty: n, integrity: i, aesthetics: a, resilience: rs, total };
   }
 
+  const graph: GraphState = { beads: {}, edges: {}, outbound: {}, inbound: {} };
+  for (const bead of Object.values(state.beads)) addBead(graph, bead);
+  for (const edge of Object.values(state.edges)) addEdge(graph, edge);
+  const strongPaths = findStrongestPaths(graph, 3).map(p => ({
+    nodes: p.nodes,
+    why: `weight ${p.weight.toFixed(2)}`
+  }));
+  const weakSpots = Object.values(state.beads)
+    .filter(b => (graph.outbound[b.id]?.length || 0) + (graph.inbound[b.id]?.length || 0) === 0)
+    .map(b => b.id);
+
   const winner = Object.entries(scores).sort((a, b) => b[1].total - a[1].total)[0]?.[0];
-  return { winner, scores, strongPaths: [], weakSpots: [], missedFuse: undefined };
+  return { winner, scores, strongPaths, weakSpots, missedFuse: undefined };
 }
 
 export default judge;
