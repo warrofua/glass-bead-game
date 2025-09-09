@@ -47,6 +47,13 @@ describe('App', () => {
       if (u.endsWith(`/match/${mockState.id}/move`)) {
         return Promise.resolve({ ok: true, text: async () => '' });
       }
+      if (u.endsWith(`/match/${mockState.id}/ai`)) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ suggestion: 'AI idea' }),
+          text: async () => '',
+        });
+      }
       return Promise.reject(new Error('Unknown endpoint'));
     });
   });
@@ -130,5 +137,39 @@ describe('App', () => {
     await waitFor(() => expect(bindButton).toBeDisabled());
     expect(bead1).not.toHaveAttribute('aria-selected', 'true');
     expect(bead2).not.toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('populates textarea with AI suggestion', async () => {
+    render(<App />);
+
+    fireEvent.change(screen.getByPlaceholderText('e.g., MagisterRex'), {
+      target: { value: 'Alice' },
+    });
+
+    fireEvent.click(screen.getByText('Create'));
+    await screen.findByText(/Seed 1/);
+
+    fireEvent.click(screen.getByText('Join'));
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining(`/match/${mockState.id}/join`),
+        expect.any(Object)
+      );
+    });
+
+    const suggestButton = screen.getByRole('button', { name: 'Suggest with AI' });
+    await waitFor(() => expect(suggestButton).not.toBeDisabled());
+    fireEvent.click(suggestButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining(`/match/${mockState.id}/ai`),
+        expect.any(Object)
+      );
+    });
+
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText('Share an idea...')).toHaveValue('AI idea')
+    );
   });
 });

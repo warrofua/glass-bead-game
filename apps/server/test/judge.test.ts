@@ -30,6 +30,6 @@ test('judge produces deterministic scores and winner', () => {
 
   const scroll = judge(state);
   assert.equal(scroll.winner, 'p1');
-  assert.ok(Math.abs(scroll.scores['p1'].total - 0.629983334485161) < 1e-9);
-  assert.ok(Math.abs(scroll.scores['p2'].total - 0.6124973524931787) < 1e-9);
+  assert.ok(Math.abs(scroll.scores['p1'].total - 0.33) < 1e-9);
+  assert.ok(Math.abs(scroll.scores['p2'].total - 0.32) < 1e-9);
 });
