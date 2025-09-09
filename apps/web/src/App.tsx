@@ -28,6 +28,21 @@ export default function App() {
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
 
+  const twistAllows = (type: Move["type"]): boolean => {
+    const effect = state?.twist?.effect;
+    if (!effect) return true;
+    if ((type === "cast" || type === "mirror" || type === "counterpoint") && effect.modalityLock && !effect.modalityLock.includes("text")) return false;
+    if ((type === "bind" || type === "counterpoint") && effect.requiredRelation) {
+      const label = type === "bind" ? "analogy" : "motif-echo";
+      if (label !== effect.requiredRelation) return false;
+    }
+    if ((type === "bind" || type === "counterpoint") && effect.justificationLimit) {
+      const justification = type === "bind" ? "Two features align; one disanalogy is noted." : "Inverted motif. Counter view.";
+      if (justification.length > effect.justificationLimit) return false;
+    }
+    return true;
+  };
+
   useEffect(() => { localStorage.setItem("matchId", matchId); }, [matchId]);
   useEffect(() => { localStorage.setItem("handle", handle); }, [handle]);
 
@@ -63,7 +78,7 @@ export default function App() {
   };
 
   const castBead = async () => {
-    if (!playerId || !state) return;
+    if (!playerId || !state || !twistAllows("cast")) return;
     const text = beadText.trim();
     if (!text || text.length > 500) return;
     const beadId = `b_${Math.random().toString(36).slice(2, 8)}`;
@@ -108,7 +123,7 @@ export default function App() {
   };
 
   const bindSelected = async () => {
-    if (!playerId || !state || selected.length !== 2) return;
+    if (!playerId || !state || selected.length !== 2 || !twistAllows("bind")) return;
     const [from, to] = selected;
     const move: Move = {
       id: `m_${Math.random().toString(36).slice(2,8)}`,
@@ -132,6 +147,43 @@ export default function App() {
       setSelected([]);
     } catch (err) {
       console.error("Failed to bind beads", err);
+    }
+  };
+
+  const counterpointSelected = async () => {
+    if (!playerId || !state || selected.length !== 2 || !twistAllows("counterpoint")) return;
+    const [from, to] = selected;
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "counterpoint",
+      payload: {
+        from,
+        to,
+        label: "motif-echo",
+        justification: "Inverted motif. Counter view.",
+      },
+      timestamp: Date.now(),
+      durationMs: 800,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+      setSelected([]);
+    } catch (err) {
+      console.error("Failed to counterpoint beads", err);
+    }
+  };
+
+  const drawTwist = async () => {
+    if (!state) return;
+    try {
+      await api(`/match/${state.id}/twist`, { method: "POST" });
+    } catch (err) {
+      console.error("Failed to draw twist", err);
     }
   };
 
@@ -206,6 +258,16 @@ export default function App() {
             ))}
           </ul>
         </div>
+        {state && (
+          <div className="pt-4">
+            <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Twist</h2>
+            {state.twist ? (
+              <p className="text-sm mt-1">{state.twist.name}: {state.twist.description}</p>
+            ) : (
+              <button onClick={drawTwist} disabled={!isMyTurn} className="px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed">Draw Twist</button>
+            )}
+          </div>
+        )}
         <div className="pt-4 space-y-2">
           <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Cast Bead</h2>
           <textarea
@@ -223,17 +285,24 @@ export default function App() {
           </button>
           <button
             onClick={castBead}
-            disabled={!beadText.trim() || !isMyTurn}
+            disabled={!beadText.trim() || !isMyTurn || !twistAllows("cast")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cast Bead
           </button>
           <button
             onClick={bindSelected}
-            disabled={!isMyTurn || selected.length !== 2}
+            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("bind")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Bind Selected
+          </button>
+          <button
+            onClick={counterpointSelected}
+            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("counterpoint")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Counterpoint Selected
           </button>
           <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
           <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>

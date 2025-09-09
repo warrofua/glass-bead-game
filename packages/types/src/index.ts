@@ -18,7 +18,17 @@ export interface Bead {
 export interface Edge {
   id: string; from: string; to: string; label: RelationLabel; justification: string;
 }
-export type MoveType = "cast" | "bind" | "transmute" | "lift" | "refute" | "canonize" | "prune" | "mirror" | "joker";
+export type MoveType =
+  | "cast"
+  | "bind"
+  | "transmute"
+  | "lift"
+  | "refute"
+  | "canonize"
+  | "prune"
+  | "mirror"
+  | "counterpoint"
+  | "joker";
 export interface Move {
   id: string; playerId: string; type: MoveType; payload: any;
   timestamp: number; durationMs: number; valid: boolean; notes?: string;
@@ -34,7 +44,11 @@ export interface GameState {
   id: string; round: 1|2|3|4; phase: string; players: Player[];
   currentPlayerId?: string;
   seeds: Seed[]; beads: Record<string,Bead>; edges: Record<string,Edge>; moves: Move[];
-  twist?: ConstraintCard; cathedral?: Cathedral; createdAt: number; updatedAt: number;
+  /** Active twist affecting move validation */
+  twist?: ConstraintCard;
+  /** Remaining twists to draw from */
+  twistDeck?: ConstraintCard[];
+  cathedral?: Cathedral; createdAt: number; updatedAt: number;
 }
 
 export interface JudgedScores {
@@ -102,7 +116,7 @@ export function validateSeed(seed: Seed): boolean {
 
 /**
  * Validate a move against a given game state. Currently supports basic rules for
- * `cast` and `bind` moves.
+ * `cast`, `bind`, `mirror`, and `counterpoint` moves.
  */
 export interface ValidationResult { ok: boolean; error?: string }
 
@@ -115,6 +129,7 @@ const MOVE_COSTS: Record<MoveType, { insight?: number; restraint?: number }> = {
   canonize: { insight: 1, restraint: 1 },
   prune: { restraint: 1 },
   mirror: { insight: 1 },
+  counterpoint: { insight: 1 },
   joker: {}
 };
 
@@ -134,12 +149,13 @@ export function validateMove(move: Move, state: GameState): ValidationResult {
     if (restraintShort) return { ok: false, error: "Not enough restraint" };
   }
 
-  if (move.type === "cast") {
+  const twist = state.twist?.effect;
+
+  if (move.type === "cast" || move.type === "mirror") {
     const bead = move.payload?.bead as Bead | undefined;
     if (!bead) return { ok: false, error: "Missing bead" };
-    if (bead.modality !== "text") return { ok: false, error: "Only text beads allowed" };
-    if (typeof bead.content !== "string") return { ok: false, error: "Invalid content" };
-    if (bead.content.trim().length === 0) return { ok: false, error: "Empty content" };
+    if (typeof bead.content !== "string" || bead.content.trim().length === 0)
+      return { ok: false, error: "Empty content" };
     bead.content = sanitizeMarkdown(bead.content);
     if (bead.content.length > 10_000) return { ok: false, error: "Content too long" };
     if (typeof bead.complexity !== "number" || bead.complexity < 1 || bead.complexity > 5)
@@ -150,17 +166,38 @@ export function validateMove(move: Move, state: GameState): ValidationResult {
     }
     if (bead.seedId && !state.seeds.find((s) => s.id === bead.seedId))
       return { ok: false, error: "Unknown seed" };
+    // Mirror-specific: ensure target exists and modality differs
+    if (move.type === "mirror") {
+      const targetId = move.payload?.targetId as string | undefined;
+      if (!targetId || !state.beads[targetId])
+        return { ok: false, error: "Target bead not found" };
+      const target = state.beads[targetId];
+      if (target.modality === bead.modality)
+        return { ok: false, error: "Must change modality" };
+    } else {
+      // cast move restrictions
+      if (bead.modality !== "text")
+        return { ok: false, error: "Only text beads allowed" };
+    }
+    if (twist?.modalityLock && !twist.modalityLock.includes(bead.modality))
+      return { ok: false, error: "Twist restricts modality" };
     return { ok: true };
   }
 
-  if (move.type === "bind") {
+  if (move.type === "bind" || move.type === "counterpoint") {
     const { from, to, label, justification } = move.payload ?? {};
     if (!from || !to || from === to) return { ok: false, error: "Invalid endpoints" };
     if (!state.beads[from] || !state.beads[to]) return { ok: false, error: "Bead not found" };
-    if (label !== "analogy") return { ok: false, error: "Unsupported relation" };
+    if (move.type === "bind" && label !== "analogy")
+      return { ok: false, error: "Unsupported relation" };
+    if (typeof label !== "string") return { ok: false, error: "Missing relation" };
+    if (twist?.requiredRelation && label !== twist.requiredRelation)
+      return { ok: false, error: `Twist requires relation ${twist.requiredRelation}` };
     if (typeof justification !== "string" || justification.trim().length === 0)
       return { ok: false, error: "Missing justification" };
     const cleanJust = sanitizeMarkdown(justification);
+    if (twist?.justificationLimit && cleanJust.length > twist.justificationLimit)
+      return { ok: false, error: "Justification too long" };
     move.payload.justification = cleanJust;
     const sentences = cleanJust
       .split(/[.!?]/)
@@ -170,20 +207,21 @@ export function validateMove(move: Move, state: GameState): ValidationResult {
     return { ok: true };
   }
 
-  return { ok: true }; // other move types are treated as valid for now
+  return { ok: true }; // other move types treated as valid
 }
 /**
- * Apply a move to mutate the given game state. Supports basic `cast` and `bind` moves.
+ * Apply a move to mutate the given game state. Supports basic `cast`, `bind`, `mirror`,
+ * and `counterpoint` moves.
  * Assumes the move has already been validated.
  */
 export function applyMove(state: GameState, move: Move): void {
   state.moves.push(move);
-  if (move.type === "cast") {
+  if (move.type === "cast" || move.type === "mirror") {
     const bead = move.payload?.bead as Bead | undefined;
     if (bead) {
       state.beads[bead.id] = bead;
     }
-  } else if (move.type === "bind") {
+  } else if (move.type === "bind" || move.type === "counterpoint") {
     const { edgeId, from, to, label, justification } = move.payload ?? {};
     const id = edgeId ?? move.id;
     const edge: Edge = { id, from, to, label, justification };
