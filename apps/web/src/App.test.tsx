@@ -103,7 +103,7 @@ describe('App', () => {
     });
 
     const bead1 = await screen.findByTestId('bead-b1');
-    const bead2 = screen.getByTestId('bead-b2');
+    const bead2 = await screen.findByTestId('bead-b2');
 
     fireEvent.click(bead1);
     fireEvent.click(bead2);
