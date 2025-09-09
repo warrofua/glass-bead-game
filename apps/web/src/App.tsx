@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { GameState, Bead, Move, JudgmentScroll } from "@gbg/types";
 import GraphView from "./GraphView";
-
-type WsMsg = { type: string; payload: any };
+import useMatchState from "./hooks/useMatchState";
 
 // Helper around fetch that only sets the JSON content type when a body is
 // present (Fastify returns 400 on an empty JSON body) and throws on HTTP
@@ -23,26 +22,14 @@ export default function App() {
   const [matchId, setMatchId] = useState<string>(() => localStorage.getItem("matchId") || "");
   const [handle, setHandle] = useState<string>(() => localStorage.getItem("handle") || "");
   const [playerId, setPlayerId] = useState<string>("");
-  const [state, setState] = useState<GameState | null>(null);
   const [scroll, setScroll] = useState<JudgmentScroll | null>(null);
   const [beadText, setBeadText] = useState("");
-  const wsRef = useRef<WebSocket | null>(null);
+  const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
 
   useEffect(() => { localStorage.setItem("matchId", matchId); }, [matchId]);
   useEffect(() => { localStorage.setItem("handle", handle); }, [handle]);
-
-  const connectWs = (id?: string) => {
-    if (!id) return;
-    wsRef.current?.close();
-    const ws = new WebSocket(`ws://localhost:8787/?matchId=${id}`);
-    ws.onmessage = (e) => {
-      const msg: WsMsg = JSON.parse(e.data);
-      if (msg.type === "state:update") setState(msg.payload);
-    };
-    wsRef.current = ws;
-  };
 
   const createMatch = async () => {
     try {
@@ -54,7 +41,7 @@ export default function App() {
       }
       setMatchId(data.id);
       setState(data);
-      connectWs(data.id);
+      connect(data.id);
     } catch (err) {
       console.error("Failed to create match", err);
     }
@@ -62,7 +49,7 @@ export default function App() {
 
   const joinMatch = async () => {
     if (!matchId || !handle) return;
-    connectWs(matchId);
+    connect(matchId);
     try {
       const res = await api(`/match/${matchId}/join`, {
         method: "POST",
