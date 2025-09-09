@@ -5,6 +5,7 @@ node_modules/
 /dist/
 packages/*/dist/
 apps/*/dist/
+apps/web/dist/
 
 # Logs
 npm-debug.log*
