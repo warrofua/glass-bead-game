@@ -181,7 +181,7 @@ export default function GraphView({
       )
       .alpha(1)
       .restart();
-  }, [lift, liftStrength, height]);
+  }, [state, lift, liftStrength, height]);
 
   return <svg ref={svgRef} width={width} height={height} />;
 }
