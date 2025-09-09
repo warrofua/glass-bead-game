@@ -22,12 +22,12 @@ This plan derives from the MVP and Beta requirements in [`PRD.md`](PRD.md). It o
 ## Phase 2 – Beta Preview
 
 ### Constraints & Counterpoint
-- Extend move validators to support global twists and counterpoint moves.
-- Update server APIs and UI to enforce active twists and allow mirror/subvert counterpoint moves.
+- Extend move validators to support global twists and counterpoint moves. *(completed)*
+- Update server APIs and UI to enforce active twists and allow mirror/subvert counterpoint moves. *(completed)*
 
 ### Concordance & Graph
-- Introduce Cathedral node composition and an optional force-directed graph view.
-- Persist Cathedral nodes in state and render force-directed graph with basic drag/zoom.
+- Introduce Cathedral node composition and an optional force-directed graph view. *(completed)*
+- Persist Cathedral nodes in state and render force-directed graph with basic drag/zoom. *(completed)*
 
 ### Judge v1
 - Replace stub judge with embedding-based resonance, NLI integrity checks, and novelty scoring.

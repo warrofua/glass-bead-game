@@ -8,5 +8,6 @@ Additional project documentation lives in this directory:
 - `architecture.md` – architecture notes and resonance path analysis
 - `architecture.svg` – overview of the current system architecture
 - `daily-overview-2025-09-08.md` – comprehensive development history through September 8, 2025
+- `daily-overview-2025-09-09.md` – development summary through September 9, 2025
 
 These documents complement the main `README.md` in the repository root.
