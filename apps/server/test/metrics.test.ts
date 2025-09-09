@@ -10,7 +10,7 @@ test('metrics endpoint reports move counts and latency', async (t) => {
   const cwd = path.join(__dirname, '..');
   const server = spawn('node', ['dist/index.js'], {
     cwd,
-    env: { ...process.env, PORT: '9997' },
+    env: { ...process.env, PORT: '9994' },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   await new Promise(res => setTimeout(res, 1000));
@@ -18,7 +18,7 @@ test('metrics endpoint reports move counts and latency', async (t) => {
     server.kill();
   });
 
-  const base = 'http://127.0.0.1:9997';
+  const base = 'http://127.0.0.1:9994';
 
   const matchRes = await fetch(`${base}/match`, { method: 'POST' });
   const match = await matchRes.json();

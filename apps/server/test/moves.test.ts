@@ -17,7 +17,7 @@ function startServer(port: number){
 }
 
 test('cast rejects when insight and wild exhausted', async (t) => {
-  const port = 9997;
+  const port = 9993;
   const server = startServer(port);
   await new Promise(r => setTimeout(r, 1000));
   t.after(() => server.kill());
