@@ -1,6 +1,6 @@
 # Development Plan
 
-This plan derives from the MVP and Beta requirements in [`prd.md`](../prd.md). It organizes work into modular deliverables across the repo's packages.
+This plan derives from the MVP and Beta requirements in [`PRD.md`](PRD.md). It organizes work into modular deliverables across the repo's packages.
 
 ## Phase 1 – MVP Core
 
