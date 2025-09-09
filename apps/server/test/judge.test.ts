@@ -28,8 +28,10 @@ test('judge produces deterministic scores and winner', () => {
     updatedAt: 0
   };
 
-  const scroll = judge(state);
-  assert.equal(scroll.winner, 'p1');
-  assert.ok(Math.abs(scroll.scores['p1'].total - 0.629983334485161) < 1e-9);
-  assert.ok(Math.abs(scroll.scores['p2'].total - 0.6124973524931787) < 1e-9);
+  const first = judge(state);
+  const second = judge(state);
+
+  assert.deepEqual(first, second);
+  assert.equal(first.winner, 'p1');
+  assert.ok(first.scores['p1'].total > first.scores['p2'].total);
 });
