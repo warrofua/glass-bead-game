@@ -18,17 +18,20 @@ export interface Bead {
 export interface Edge {
   id: string; from: string; to: string; label: RelationLabel; justification: string;
 }
-export type MoveType =
-  | "cast"
-  | "bind"
-  | "transmute"
-  | "lift"
-  | "refute"
-  | "canonize"
-  | "prune"
-  | "mirror"
-  | "counterpoint"
-  | "joker";
+export const MOVE_TYPES = [
+  "cast",
+  "bind",
+  "transmute",
+  "lift",
+  "refute",
+  "canonize",
+  "prune",
+  "mirror",
+  "counterpoint",
+  "joker",
+] as const;
+
+export type MoveType = (typeof MOVE_TYPES)[number];
 export interface Move {
   id: string; playerId: string; type: MoveType; payload: any;
   timestamp: number; durationMs: number; valid: boolean; notes?: string;
