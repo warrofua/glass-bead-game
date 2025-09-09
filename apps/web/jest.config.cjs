@@ -7,6 +7,7 @@ module.exports = {
   moduleNameMapper: {
     '^@gbg/types$': '<rootDir>/../../packages/types/src',
     '^d3$': '<rootDir>/../../node_modules/d3/dist/d3.js',
+    '^./App$': '<rootDir>/src/App.tsx',
   },
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', { 

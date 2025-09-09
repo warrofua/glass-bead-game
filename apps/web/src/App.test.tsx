@@ -102,6 +102,12 @@ describe('App', () => {
       );
     });
 
+    // Wait for beads to be rendered
+    await waitFor(() => {
+      expect(screen.getByText('Idea 1')).toBeInTheDocument();
+      expect(screen.getByText('Idea 2')).toBeInTheDocument();
+    });
+
     const bead1 = await screen.findByTestId('bead-b1');
     const bead2 = await screen.findByTestId('bead-b2');
 
