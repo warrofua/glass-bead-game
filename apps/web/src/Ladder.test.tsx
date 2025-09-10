@@ -17,7 +17,9 @@ describe('Ladder', () => {
 
   it('fetches and displays standings', async () => {
     render(<Ladder />);
+    expect(screen.getByText(/Loading standings/)).toBeInTheDocument();
     await waitFor(() => {
+      expect(screen.queryByText(/Loading standings/)).not.toBeInTheDocument();
       expect(screen.getByText(/#1 Alice/)).toBeInTheDocument();
       expect(screen.getByText(/#2 Bob/)).toBeInTheDocument();
     });
@@ -29,6 +31,7 @@ describe('Ladder', () => {
     );
     render(<Ladder />);
     await waitFor(() => {
+      expect(screen.queryByText(/Loading standings/)).not.toBeInTheDocument();
       expect(screen.getByText(/No standings yet/)).toBeInTheDocument();
     });
   });
@@ -39,6 +42,7 @@ describe('Ladder', () => {
     render(<Ladder />);
     await waitFor(() => {
       expect(warn).toHaveBeenCalled();
+      expect(screen.queryByText(/Loading standings/)).not.toBeInTheDocument();
       expect(screen.getByText(/No standings yet/)).toBeInTheDocument();
     });
     warn.mockRestore();
