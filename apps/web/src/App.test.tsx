@@ -139,6 +139,56 @@ describe('App', () => {
     expect(bead2).not.toHaveAttribute('aria-selected', 'true');
   });
 
+  it('mirrors a selected bead and resets selection', async () => {
+    render(<App />);
+
+    fireEvent.change(screen.getByPlaceholderText('e.g., MagisterRex'), {
+      target: { value: 'Alice' },
+    });
+
+    fireEvent.click(screen.getByText('Create'));
+    await screen.findByText(/Seed 1/);
+
+    fireEvent.click(screen.getByText('Join'));
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining(`/match/${mockState.id}/join`),
+        expect.any(Object)
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Idea 1')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Modality'), {
+      target: { value: 'image' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Share an idea...'), {
+      target: { value: 'Mirror bead' },
+    });
+
+    const bead1 = await screen.findByTestId('bead-b1');
+    fireEvent.click(bead1);
+
+    const mirrorButton = screen.getByRole('button', { name: 'Mirror Selected' });
+    fireEvent.click(mirrorButton);
+
+    await waitFor(() => {
+      const moveCall = (global.fetch as jest.Mock).mock.calls.find(c =>
+        (c[0] as string).includes('/move')
+      );
+      expect(moveCall).toBeTruthy();
+      const body = JSON.parse(moveCall![1].body as string);
+      expect(body.type).toBe('mirror');
+      expect(body.payload.targetId).toBe('b1');
+      expect(body.payload.bead.modality).toBe('image');
+    });
+
+    await waitFor(() => expect(mirrorButton).toBeDisabled());
+    expect(bead1).not.toHaveAttribute('aria-selected', 'true');
+  });
+
   it('populates textarea with AI suggestion', async () => {
     render(<App />);
 
