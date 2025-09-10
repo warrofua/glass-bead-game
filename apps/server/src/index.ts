@@ -29,6 +29,7 @@ const matches = new Map<string, GameState>();
 const sockets = new Map<string, Set<WebSocket>>();
 const metrics = { wsSendFailures: 0, totalMoves: 0, latency: 0 };
 const ratings = new Map<string, { wins: number; losses: number }>();
+let pendingRatingWrite: Promise<void> = Promise.resolve();
 
 const RATINGS_FILE = process.env.RATINGS_FILE
   ? path.resolve(process.env.RATINGS_FILE)
@@ -50,7 +51,10 @@ async function loadRatings() {
 
 async function flushRatings() {
   const arr = Array.from(ratings.entries()).map(([handle, rec]) => ({ handle, ...rec }));
-  await writeFile(RATINGS_FILE, JSON.stringify(arr, null, 2));
+  pendingRatingWrite = pendingRatingWrite
+    .catch(() => {})
+    .then(() => writeFile(RATINGS_FILE, JSON.stringify(arr, null, 2)));
+  return pendingRatingWrite;
 }
 
 await loadRatings();
