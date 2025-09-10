@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import useMatchState from './useMatchState';
 import type { GameState } from '@gbg/types';
 
@@ -21,11 +21,11 @@ function Wrapper({ initial }: { initial: GameState }) {
   return <div>{state?.id}</div>;
 }
 
-test('updates state when initialState changes', () => {
+test('updates state when initialState changes', async () => {
   const stateA: GameState = { ...baseState, id: 'A' };
   const stateB: GameState = { ...baseState, id: 'B' };
   const { rerender } = render(<Wrapper initial={stateA} />);
   expect(screen.getByText('A')).toBeInTheDocument();
   rerender(<Wrapper initial={stateB} />);
-  expect(screen.getByText('B')).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByText('B')).toBeInTheDocument());
 });

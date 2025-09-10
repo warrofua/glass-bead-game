@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import GraphView from './GraphView';
 import type { GameState } from '@gbg/types';
 
@@ -22,28 +22,32 @@ const state: GameState = {
   updatedAt: 0,
 };
 
-test('renders nodes/edges and highlights strong paths', () => {
+test('renders nodes/edges and highlights strong paths', async () => {
   const strongPaths = [{ nodes: ['a', 'b'] }];
   const { container } = render(
     <GraphView initialState={state} strongPaths={strongPaths} selectedPathIndex={0} width={200} height={200} />
   );
-  const nodes = container.querySelectorAll('circle');
-  const edges = container.querySelectorAll('line');
-  expect(nodes.length).toBe(2);
-  expect(edges.length).toBe(1);
-  nodes.forEach((n) => expect(n.getAttribute('fill')).toBe('#ef4444'));
-  const edge = edges[0];
-  expect(edge.getAttribute('stroke')).toBe('#ef4444');
-  expect(edge.getAttribute('stroke-width')).toBe('3');
+  await waitFor(() => {
+    const nodes = container.querySelectorAll('circle');
+    const edges = container.querySelectorAll('line');
+    expect(nodes.length).toBe(2);
+    expect(edges.length).toBe(1);
+    nodes.forEach((n) => expect(n.getAttribute('fill')).toBe('#ef4444'));
+    const edge = edges[0];
+    expect(edge.getAttribute('stroke')).toBe('#ef4444');
+    expect(edge.getAttribute('stroke-width')).toBe('3');
+  });
 });
 
-test('renders cathedral node when present', () => {
+test('renders cathedral node when present', async () => {
   const catState: GameState = {
     ...state,
     cathedral: { id: 'cat', content: 'summary', references: ['a', 'b'] },
   };
   const { container } = render(<GraphView initialState={catState} width={200} height={200} />);
-  const cathedralNode = container.querySelector('#cat');
-  expect(cathedralNode).not.toBeNull();
-  expect(cathedralNode?.getAttribute('fill')).toBe('#fbbf24');
+  await waitFor(() => {
+    const cathedralNode = container.querySelector('#cat');
+    expect(cathedralNode).not.toBeNull();
+    expect(cathedralNode?.getAttribute('fill')).toBe('#fbbf24');
+  });
 });
