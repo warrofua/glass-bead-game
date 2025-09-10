@@ -216,6 +216,19 @@ export default function App() {
     }
   };
 
+  const requestConcord = async () => {
+    if (!state) return;
+    try {
+      const res = await api(`/match/${state.id}/concord`, { method: "POST" });
+      const data = await res.json();
+      if (data?.cathedral) {
+        setState((s) => (s ? { ...s, cathedral: data.cathedral } : s));
+      }
+    } catch (err) {
+      console.error("Failed to request concord", err);
+    }
+  };
+
   const exportLog = async () => {
     if (!state) return;
     try {
@@ -309,6 +322,7 @@ export default function App() {
             Counterpoint Selected
           </button>
           <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
+          <button onClick={requestConcord} disabled={!isMyTurn} className="w-full px-3 py-2 bg-amber-600 rounded hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">Concord</button>
           <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>
         </div>
         <p className="text-xs text-[var(--muted)] pt-4">MVP: cast text beads, bind, get a stub judgment.</p>
@@ -371,7 +385,7 @@ export default function App() {
                 <section className="lg:col-span-2">
                   <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Graph</h3>
                   <div className="mt-2">
-                    <GraphView matchId={matchId} strongPaths={scroll?.strongPaths} selectedPathIndex={selectedPath} width={600} height={400} />
+                    <GraphView matchId={matchId} state={state ?? undefined} strongPaths={scroll?.strongPaths} selectedPathIndex={selectedPath} width={600} height={400} />
                   </div>
                 </section>
               </div>
