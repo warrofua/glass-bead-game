@@ -18,7 +18,6 @@ test('cast rejects when insight and wild exhausted', async (t) => {
     }).then(r => r.json());
 
   const p1 = await join('A');
-  await join('B');
 
   const cast = async () => {
     const bead = {
@@ -80,7 +79,6 @@ test('bind uses restraint then wild then rejects', async (t) => {
     }).then(r => r.json());
 
   const p1 = await join('A');
-  await join('B');
 
   // cast two beads to bind
   const castBead = async (id:string) => {
