@@ -35,8 +35,19 @@ export default function App() {
   const twistAllows = (type: Move["type"]): boolean => {
     const effect = state?.twist?.effect;
     if (!effect) return true;
-    if ((type === "cast" || type === "mirror") && effect.modalityLock && !effect.modalityLock.includes(beadModality)) return false;
-    if ((type === "bind" || type === "counterpoint" || type === "canonize" || type === "refute") && effect.requiredRelation) {
+    if (
+      (type === "cast" || type === "mirror") &&
+      effect.modalityLock &&
+      !effect.modalityLock.includes(beadModality)
+    )
+      return false;
+    if (
+      (type === "bind" ||
+        type === "counterpoint" ||
+        type === "canonize" ||
+        type === "refute") &&
+      effect.requiredRelation
+    ) {
       const labelMap: Record<string, string> = {
         bind: "analogy",
         counterpoint: "motif-echo",
@@ -46,7 +57,13 @@ export default function App() {
       const label = labelMap[type];
       if (label && label !== effect.requiredRelation) return false;
     }
-    if ((type === "bind" || type === "counterpoint" || type === "canonize" || type === "refute") && effect.justificationLimit) {
+    if (
+      (type === "bind" ||
+        type === "counterpoint" ||
+        type === "canonize" ||
+        type === "refute") &&
+      effect.justificationLimit
+    ) {
       const justificationMap: Record<string, string> = {
         bind: "Two features align; one disanalogy is noted.",
         counterpoint: "Inverted motif. Counter view.",
@@ -252,7 +269,6 @@ export default function App() {
       console.error("Failed to lift", err);
     }
   };
-
   const canonizeMove = async () => {
     if (!playerId || !state || selected.length !== 1 || !twistAllows("canonize")) return;
     const targetId = selected[0];
@@ -275,7 +291,6 @@ export default function App() {
       console.error("Failed to canonize", err);
     }
   };
-
   const refuteMove = async () => {
     if (!playerId || !state || selected.length !== 1 || !twistAllows("refute")) return;
     const targetId = selected[0];
@@ -298,7 +313,6 @@ export default function App() {
       console.error("Failed to refute", err);
     }
   };
-
   const pruneMove = async () => {
     if (!playerId || !state || selected.length !== 1 || !twistAllows("prune")) return;
     const targetId = selected[0];
@@ -321,7 +335,6 @@ export default function App() {
       console.error("Failed to prune", err);
     }
   };
-
   const jokerMove = async () => {
     if (!playerId || !state || !twistAllows("joker")) return;
     const move: Move = {
@@ -342,7 +355,6 @@ export default function App() {
       console.error("Failed to play joker", err);
     }
   };
-
   const drawTwist = async () => {
     if (!state) return;
     try {
@@ -476,69 +488,76 @@ export default function App() {
           >
             Suggest with AI
           </button>
-          <button
-            onClick={castBead}
-            disabled={!beadText.trim() || beadModality !== 'text' || !isMyTurn || !twistAllows("cast")}
-            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Cast Bead
-          </button>
-          <button
-            onClick={bindSelected}
-            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("bind")}
-            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Bind Selected
-          </button>
-          <button
-            onClick={counterpointSelected}
-            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("counterpoint")}
-            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Counterpoint Selected
-          </button>
-          <button
-            onClick={mirrorSelected}
-            disabled={!isMyTurn || selected.length !== 1 || !beadText.trim() || !twistAllows("mirror")}
-            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Mirror Selected
-          </button>
-          <button
-            onClick={liftMove}
-            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("lift")}
-            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Lift
-          </button>
-          <button
-            onClick={canonizeMove}
-            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("canonize")}
-            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Canonize
-          </button>
-          <button
-            onClick={refuteMove}
-            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("refute")}
-            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Refute
-          </button>
-          <button
-            onClick={pruneMove}
-            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("prune")}
-            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Prune
-          </button>
-          <button
-            onClick={jokerMove}
-            disabled={!isMyTurn || !twistAllows("joker")}
-            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Joker
-          </button>
+          {[{
+            label: "Cast Bead",
+            onClick: castBead,
+            disabled:
+              !beadText.trim() ||
+              beadModality !== "text" ||
+              !isMyTurn ||
+              !twistAllows("cast"),
+          },
+          {
+            label: "Bind Selected",
+            onClick: bindSelected,
+            disabled:
+              !isMyTurn || selected.length !== 2 || !twistAllows("bind"),
+          },
+          {
+            label: "Counterpoint Selected",
+            onClick: counterpointSelected,
+            disabled:
+              !isMyTurn ||
+              selected.length !== 2 ||
+              !twistAllows("counterpoint"),
+          },
+          {
+            label: "Mirror Selected",
+            onClick: mirrorSelected,
+            disabled:
+              !isMyTurn ||
+              selected.length !== 1 ||
+              !beadText.trim() ||
+              !twistAllows("mirror"),
+          },
+          {
+            label: "Lift",
+            onClick: liftMove,
+            disabled:
+              !isMyTurn || selected.length !== 1 || !twistAllows("lift"),
+          },
+          {
+            label: "Canonize",
+            onClick: canonizeMove,
+            disabled:
+              !isMyTurn || selected.length !== 1 || !twistAllows("canonize"),
+          },
+          {
+            label: "Refute",
+            onClick: refuteMove,
+            disabled:
+              !isMyTurn || selected.length !== 1 || !twistAllows("refute"),
+          },
+          {
+            label: "Prune",
+            onClick: pruneMove,
+            disabled:
+              !isMyTurn || selected.length !== 1 || !twistAllows("prune"),
+          },
+          {
+            label: "Joker",
+            onClick: jokerMove,
+            disabled: !isMyTurn || !twistAllows("joker"),
+          }].map(({ label, onClick, disabled }) => (
+            <button
+              key={label}
+              onClick={onClick}
+              disabled={disabled}
+              className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {label}
+            </button>
+          ))}
           <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
           <button onClick={requestConcord} disabled={!isMyTurn} className="w-full px-3 py-2 bg-amber-600 rounded hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">Concord</button>
           <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>
