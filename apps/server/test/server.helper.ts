@@ -2,6 +2,8 @@ import { spawn, ChildProcess } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import net from 'node:net';
+import { mkdtempSync } from 'node:fs';
+import os from 'node:os';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -24,9 +26,11 @@ export async function getFreePort(): Promise<number> {
 export async function startServer(port?: number): Promise<{ server: ChildProcess; port: number }> {
   const actualPort = port ?? (await getFreePort());
   const cwd = path.join(__dirname, '..');
+  const tmpDir = mkdtempSync(path.join(os.tmpdir(), 'gbg-'));
+  const ratingsFile = path.join(tmpDir, 'ratings.json');
   const server = spawn('node', ['dist/index.js'], {
     cwd,
-    env: { ...process.env, PORT: String(actualPort) },
+    env: { ...process.env, PORT: String(actualPort), RATINGS_FILE: ratingsFile },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   const start = Date.now();
