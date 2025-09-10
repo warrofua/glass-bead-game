@@ -36,12 +36,12 @@ test('counterpoint move broadcasts and rejects invalid label', async (t) => {
       body: JSON.stringify({ handle })
     }).then(r => r.json());
   const p1 = await join('Alice');
-  await join('Bob');
+  const p2 = await join('Bob');
 
-  const cast = async (content: string) => {
+  const cast = async (player: any, content: string) => {
     const bead = {
       id: `b_${Math.random().toString(36).slice(2,8)}`,
-      ownerId: p1.id,
+      ownerId: player.id,
       modality: 'text',
       content,
       complexity: 1,
@@ -49,7 +49,7 @@ test('counterpoint move broadcasts and rejects invalid label', async (t) => {
     };
     const move = {
       id: `m_${Math.random().toString(36).slice(2,8)}`,
-      playerId: p1.id,
+      playerId: player.id,
       type: 'cast',
       payload: { bead },
       timestamp: Date.now(),
@@ -63,8 +63,8 @@ test('counterpoint move broadcasts and rejects invalid label', async (t) => {
     });
     return bead.id;
   };
-  const b1 = await cast('one');
-  const b2 = await cast('two');
+  const b1 = await cast(p1, 'one');
+  const b2 = await cast(p2, 'two');
 
   // draw twists until motif-echo requirement
   await fetch(`${base}/match/${matchId}/twist`, { method: 'POST' });
@@ -119,12 +119,12 @@ test('counterpoint move broadcasts and rejects invalid label', async (t) => {
       body: JSON.stringify({ handle })
     }).then(r => r.json());
   const pBad = await joinBad('A');
-  await joinBad('B');
+  const pBad2 = await joinBad('B');
 
-  const castBad = async () => {
+  const castBad = async (player: any) => {
     const bead = {
       id: `b_${Math.random().toString(36).slice(2,8)}`,
-      ownerId: pBad.id,
+      ownerId: player.id,
       modality: 'text',
       content: 'x',
       complexity: 1,
@@ -132,7 +132,7 @@ test('counterpoint move broadcasts and rejects invalid label', async (t) => {
     };
     const move = {
       id: `m_${Math.random().toString(36).slice(2,8)}`,
-      playerId: pBad.id,
+      playerId: player.id,
       type: 'cast',
       payload: { bead },
       timestamp: Date.now(),
@@ -146,8 +146,8 @@ test('counterpoint move broadcasts and rejects invalid label', async (t) => {
     });
     return bead.id;
   };
-  const bb1 = await castBad();
-  const bb2 = await castBad();
+  const bb1 = await castBad(pBad);
+  const bb2 = await castBad(pBad2);
   await fetch(`${base}/match/${badId}/twist`, { method: 'POST' });
   await fetch(`${base}/match/${badId}/twist`, { method: 'POST' });
 

@@ -140,6 +140,8 @@ export function validateMove(move: Move, state: GameState): ValidationResult {
   if (!move || !state) return { ok: false, error: "Missing move or state" };
   const player = state.players.find((p) => p.id === move.playerId);
   if (!player) return { ok: false, error: "Unknown player" };
+  if (state.currentPlayerId && state.currentPlayerId !== player.id)
+    return { ok: false, error: "Not your turn" };
 
   const cost = MOVE_COSTS[move.type] ?? {};
   const insightShort = Math.max(0, (cost.insight ?? 0) - player.resources.insight);

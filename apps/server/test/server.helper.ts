@@ -29,7 +29,18 @@ export async function startServer(port?: number): Promise<{ server: ChildProcess
     env: { ...process.env, PORT: String(actualPort) },
     stdio: ['ignore', 'pipe', 'pipe']
   });
-  await new Promise(res => setTimeout(res, 1000));
+  const start = Date.now();
+  await new Promise((resolve, reject) => {
+    const check = () => {
+      fetch(`http://127.0.0.1:${actualPort}/match`)
+        .then(() => resolve(undefined))
+        .catch(err => {
+          if (Date.now() - start > 5000) return reject(err);
+          setTimeout(check, 100);
+        });
+    };
+    check();
+  });
   return { server, port: actualPort };
 }
 

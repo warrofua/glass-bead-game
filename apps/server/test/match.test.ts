@@ -82,9 +82,9 @@ test('match handles all move types and returns AI judgment', async (t) => {
 
   await postMove({ id: `m_${Math.random().toString(36).slice(2,8)}`, playerId: p2.id, type: 'refute', payload: {}, timestamp: Date.now(), durationMs: 0, valid: true });
 
-  await postMove({ id: `m_${Math.random().toString(36).slice(2,8)}`, playerId: p2.id, type: 'prune', payload: {}, timestamp: Date.now(), durationMs: 0, valid: true });
+  await postMove({ id: `m_${Math.random().toString(36).slice(2,8)}`, playerId: p1.id, type: 'prune', payload: {}, timestamp: Date.now(), durationMs: 0, valid: true });
 
-  await postMove({ id: `m_${Math.random().toString(36).slice(2,8)}`, playerId: p1.id, type: 'joker', payload: {}, timestamp: Date.now(), durationMs: 0, valid: true });
+  await postMove({ id: `m_${Math.random().toString(36).slice(2,8)}`, playerId: p2.id, type: 'joker', payload: {}, timestamp: Date.now(), durationMs: 0, valid: true });
 
   const state = await (await fetch(`${base}/match/${matchId}`)).json();
   assert.equal(Object.keys(state.beads).length, 2);

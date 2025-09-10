@@ -18,7 +18,6 @@ test('twist rejects bind with wrong relation', async (t) => {
     }).then(r => r.json());
 
   const p1 = await join('A');
-  await join('B');
 
   const castBead = async (id:string) => {
     const bead = { id, ownerId: p1.id, modality: 'text', content: 'x', complexity:1, createdAt: Date.now() };

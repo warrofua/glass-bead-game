@@ -22,7 +22,6 @@ test('concord builds cathedral from highest path', async (t) => {
     }).then((r) => r.json());
 
   const p1 = await join('Alice');
-  await join('Bob');
 
   const castBead = async (id: string, title: string) => {
     const bead = {
