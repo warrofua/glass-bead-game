@@ -30,14 +30,32 @@ export async function generateSeeds(
     for await (const part of client.generate(model, prompt)) {
       output += part;
     }
-    const parsed = JSON.parse(output);
-    if (Array.isArray(parsed)) {
-      const seeds = parsed.slice(0, 3).map((s: any, i: number) => ({
-        id: `s${i + 1}`,
-        text: sanitizeMarkdown(s.text ?? ''),
-        domain: sanitizeMarkdown(s.domain ?? '')
-      })).filter(s => s.text && s.domain);
-      if (seeds.length === 3) return seeds;
+    const start = output.indexOf('[');
+    const end = output.lastIndexOf(']');
+    if (start !== -1 && end !== -1 && end > start) {
+      const json = output.slice(start, end + 1);
+      const parsed = JSON.parse(json);
+      if (Array.isArray(parsed)) {
+        const seeds = parsed
+          .slice(0, 3)
+          .map((s: any) => ({
+            text: sanitizeMarkdown(s.text ?? ''),
+            domain: sanitizeMarkdown(s.domain ?? '')
+          }))
+          .filter((s) => s.text && s.domain);
+        if (seeds.length > 0) {
+          const fallback = sampleSeeds();
+          const baseLen = seeds.length;
+          for (let i = 0; i < 3 - baseLen; i++) {
+            const f = fallback[i];
+            seeds.push({
+              text: sanitizeMarkdown(f.text),
+              domain: sanitizeMarkdown(f.domain)
+            });
+          }
+          return seeds.map((s, i) => ({ id: `s${i + 1}`, ...s }));
+        }
+      }
     }
   } catch (err) {
     console.warn('LLM seed generation failed', err);
