@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import {
   MOVE_COSTS,
+  sanitizeMarkdown,
   type GameState,
   type Bead,
   type Move,
   type JudgmentScroll,
   type Modality,
 } from "@gbg/types";
+import { marked } from "marked";
 import GraphView from "./GraphView";
 import Ladder from "./Ladder";
 import useMatchState from "./hooks/useMatchState";
@@ -632,7 +634,10 @@ export default function App() {
                       >
                         <div className="text-sm font-semibold">{b.title || b.id}</div>
                         <div className="text-xs opacity-70">{b.modality} · by {b.ownerId}</div>
-                        <div className="text-xs mt-1 opacity-80">{tryParseMarkdown(b.content)}</div>
+                        <div
+                          className="text-xs mt-1 opacity-80"
+                          dangerouslySetInnerHTML={{ __html: parseMarkdown(b.content) }}
+                        />
                       </li>
                     ))}
                   </ul>
@@ -701,6 +706,7 @@ export default function App() {
   );
 }
 
-function tryParseMarkdown(content: string){
-  return content;
+function parseMarkdown(content: string): string {
+  const html = marked.parse(content, { async: false }) as string;
+  return sanitizeMarkdown(html);
 }
