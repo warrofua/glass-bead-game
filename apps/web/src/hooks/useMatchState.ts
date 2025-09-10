@@ -18,7 +18,7 @@ export default function useMatchState(
   opts: { autoConnect?: boolean; initialState?: GameState | null } = {}
 ) {
   const { autoConnect = true, initialState = null } = opts;
-  const [state, setState] = useState<GameState | null>(initialState);
+  const [state, setState] = useState<GameState | null>(null);
   // Reset internal state whenever a new initial state is provided
   useEffect(() => {
     setState(initialState);
