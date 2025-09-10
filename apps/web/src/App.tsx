@@ -72,12 +72,27 @@ export default function App() {
     const effect = state?.twist?.effect;
     if (!effect) return true;
     if ((type === "cast" || type === "mirror") && effect.modalityLock && !effect.modalityLock.includes(beadModality)) return false;
-    if ((type === "bind" || type === "counterpoint") && effect.requiredRelation) {
-      const label = type === "bind" ? "analogy" : "motif-echo";
-      if (label !== effect.requiredRelation) return false;
+    if (
+      (type === "bind" || type === "counterpoint" || type === "canonize" || type === "refute") &&
+      effect.requiredRelation
+    ) {
+      const labelMap: Record<string, string> = {
+        bind: "analogy",
+        counterpoint: "motif-echo",
+        canonize: "proof",
+        refute: "refutation",
+      };
+      const label = labelMap[type];
+      if (label && label !== effect.requiredRelation) return false;
     }
-    if ((type === "bind" || type === "counterpoint") && effect.justificationLimit) {
-      const justification = type === "bind" ? "Two features align; one disanalogy is noted." : "Inverted motif. Counter view.";
+    if ((type === "bind" || type === "counterpoint" || type === "canonize" || type === "refute") && effect.justificationLimit) {
+      const justificationMap: Record<string, string> = {
+        bind: "Two features align; one disanalogy is noted.",
+        counterpoint: "Inverted motif. Counter view.",
+        canonize: "",
+        refute: "",
+      };
+      const justification = justificationMap[type] ?? "";
       if (justification.length > effect.justificationLimit) return false;
     }
     return true;
@@ -254,6 +269,118 @@ export default function App() {
     }
   };
 
+  const liftMove = async () => {
+    if (!playerId || !state || selected.length !== 1 || !twistAllows("lift")) return;
+    const targetId = selected[0];
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "lift",
+      payload: { targetId },
+      timestamp: Date.now(),
+      durationMs: 800,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+      setSelected([]);
+    } catch (err) {
+      console.error("Failed to lift", err);
+    }
+  };
+
+  const canonizeMove = async () => {
+    if (!playerId || !state || selected.length !== 1 || !twistAllows("canonize")) return;
+    const targetId = selected[0];
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "canonize",
+      payload: { targetId },
+      timestamp: Date.now(),
+      durationMs: 800,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+      setSelected([]);
+    } catch (err) {
+      console.error("Failed to canonize", err);
+    }
+  };
+
+  const refuteMove = async () => {
+    if (!playerId || !state || selected.length !== 1 || !twistAllows("refute")) return;
+    const targetId = selected[0];
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "refute",
+      payload: { targetId },
+      timestamp: Date.now(),
+      durationMs: 800,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+      setSelected([]);
+    } catch (err) {
+      console.error("Failed to refute", err);
+    }
+  };
+
+  const pruneMove = async () => {
+    if (!playerId || !state || selected.length !== 1 || !twistAllows("prune")) return;
+    const targetId = selected[0];
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "prune",
+      payload: { targetId },
+      timestamp: Date.now(),
+      durationMs: 800,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+      setSelected([]);
+    } catch (err) {
+      console.error("Failed to prune", err);
+    }
+  };
+
+  const jokerMove = async () => {
+    if (!playerId || !state || !twistAllows("joker")) return;
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "joker",
+      payload: {},
+      timestamp: Date.now(),
+      durationMs: 800,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+    } catch (err) {
+      console.error("Failed to play joker", err);
+    }
+  };
   const drawTwist = async () => {
     if (!state) return;
     try {
@@ -425,6 +552,42 @@ export default function App() {
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Mirror Selected
+          </button>
+          <button
+            onClick={liftMove}
+            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("lift")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Lift
+          </button>
+          <button
+            onClick={canonizeMove}
+            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("canonize")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Canonize
+          </button>
+          <button
+            onClick={refuteMove}
+            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("refute")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Refute
+          </button>
+  
+          <button
+            onClick={pruneMove}
+            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("prune")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Prune
+          </button>
+          <button
+            onClick={jokerMove}
+            disabled={!isMyTurn || !twistAllows("joker")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Joker
           </button>
           <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
           <button onClick={requestConcord} disabled={!isMyTurn} className="w-full px-3 py-2 bg-amber-600 rounded hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">Concord</button>
