@@ -98,6 +98,14 @@ export default function App() {
 
   const canAfford = (type: Move["type"]) => !!remainingResources(type);
 
+  const moveCostLabel = (type: Move["type"]) => {
+    const cost = MOVE_COSTS[type] ?? {};
+    const parts: string[] = [];
+    if (cost.insight) parts.push(`-${cost.insight} Insight`);
+    if (cost.restraint) parts.push(`-${cost.restraint} Restraint`);
+    return parts.length ? ` (${parts.join(", ")})` : "";
+  };
+
   const twistAllows = (type: Move["type"]): boolean => {
     const effect = state?.twist?.effect;
     if (!effect) return true;
@@ -522,6 +530,11 @@ export default function App() {
         )}
         <div className="pt-4 space-y-2">
           <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Cast Bead</h2>
+          {currentPlayer && (
+            <p className="text-xs text-[var(--muted)]">
+              Insight: {currentPlayer.resources.insight}, Restraint: {currentPlayer.resources.restraint}, Wild: {currentPlayer.resources.wildAvailable ? 1 : 0}
+            </p>
+          )}
           <textarea
             value={beadText}
             onChange={e => setBeadText(e.target.value)}
@@ -560,64 +573,64 @@ export default function App() {
             }
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Cast Bead
+            {`Cast Bead${moveCostLabel("cast")}`}
           </button>
           <button
             onClick={bindSelected}
             disabled={!isMyTurn || selected.length !== 2 || !twistAllows("bind") || !canAfford("bind")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Bind Selected
+            {`Bind Selected${moveCostLabel("bind")}`}
           </button>
           <button
             onClick={counterpointSelected}
             disabled={!isMyTurn || selected.length !== 2 || !twistAllows("counterpoint") || !canAfford("counterpoint")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Counterpoint Selected
+            {`Counterpoint Selected${moveCostLabel("counterpoint")}`}
           </button>
           <button
             onClick={mirrorSelected}
-            disabled={!isMyTurn || selected.length !== 1 || !beadText.trim() || !twistAllows("mirror")}
+            disabled={!isMyTurn || selected.length !== 1 || !beadText.trim() || !twistAllows("mirror") || !canAfford("mirror")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Mirror Selected
+            {`Mirror Selected${moveCostLabel("mirror")}`}
           </button>
           <button
             onClick={liftMove}
-            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("lift")}
+            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("lift") || !canAfford("lift")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Lift
+            {`Lift${moveCostLabel("lift")}`}
           </button>
           <button
             onClick={canonizeMove}
-            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("canonize")}
+            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("canonize") || !canAfford("canonize")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Canonize
+            {`Canonize${moveCostLabel("canonize")}`}
           </button>
           <button
             onClick={refuteMove}
-            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("refute")}
+            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("refute") || !canAfford("refute")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Refute
+            {`Refute${moveCostLabel("refute")}`}
           </button>
-  
+
           <button
             onClick={pruneMove}
-            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("prune")}
+            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("prune") || !canAfford("prune")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Prune
+            {`Prune${moveCostLabel("prune")}`}
           </button>
           <button
             onClick={jokerMove}
-            disabled={!isMyTurn || !twistAllows("joker")}
+            disabled={!isMyTurn || !twistAllows("joker") || !canAfford("joker")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Joker
+            {`Joker${moveCostLabel("joker")}`}
           </button>
           <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
           <button onClick={requestConcord} disabled={!isMyTurn} className="w-full px-3 py-2 bg-amber-600 rounded hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">Concord</button>

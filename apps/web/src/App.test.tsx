@@ -87,7 +87,7 @@ describe('App', () => {
     fireEvent.change(screen.getByPlaceholderText('Share an idea...'), {
       target: { value: 'My bead' },
     });
-    const castButton = screen.getByRole('button', { name: 'Cast Bead' });
+    const castButton = screen.getByRole('button', { name: 'Cast Bead (-1 Insight)' });
     fireEvent.click(castButton);
 
     await waitFor(() => {
@@ -128,7 +128,7 @@ describe('App', () => {
     fireEvent.click(bead1);
     fireEvent.click(bead2);
 
-    const bindButton = screen.getByRole('button', { name: 'Bind Selected' });
+    const bindButton = screen.getByRole('button', { name: 'Bind Selected (-1 Restraint)' });
     fireEvent.click(bindButton);
 
     await waitFor(() => {
@@ -178,7 +178,7 @@ describe('App', () => {
     const bead1 = await screen.findByTestId('bead-b1');
     fireEvent.click(bead1);
 
-    const mirrorButton = screen.getByRole('button', { name: 'Mirror Selected' });
+    const mirrorButton = screen.getByRole('button', { name: 'Mirror Selected (-1 Insight)' });
     fireEvent.click(mirrorButton);
 
     await waitFor(() => {
