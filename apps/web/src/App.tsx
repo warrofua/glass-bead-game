@@ -36,7 +36,7 @@ export default function App() {
   const isMyTurn = currentPlayer?.id === playerId;
   const modalities: Modality[] = ["text", "image", "audio", "math", "code", "data"];
 
-  const twistAllows = (type: Move["type"], modality: Modality = "text"): boolean => {
+  const twistAllows = (type: Move["type"], modality: Modality = castModality): boolean => {
     const effect = state?.twist?.effect;
     if (!effect) return true;
     if ((type === "cast" || type === "mirror" || type === "counterpoint" || type === "transmute") && effect.modalityLock && !effect.modalityLock.includes(modality)) return false;
@@ -98,7 +98,7 @@ export default function App() {
       content: text,
       complexity: 1,
       createdAt: Date.now(),
-      seedId: state.seeds[0]?.id
+      seedId: state.seeds[0]?.id,
     };
     const move: Move = {
       id: `m_${Math.random().toString(36).slice(2,8)}`,
@@ -216,6 +216,42 @@ export default function App() {
     }
   };
 
+  const mirrorSelected = async () => {
+    if (!playerId || !state || selected.length !== 1 || !beadText.trim() || !twistAllows("mirror", castModality)) return;
+    const targetId = selected[0];
+    const text = beadText.trim();
+    const beadId = `b_${Math.random().toString(36).slice(2, 8)}`;
+    const bead: Bead = {
+      id: beadId,
+      ownerId: playerId,
+      modality: castModality,
+      title: "Mirror",
+      content: text,
+      complexity: 1,
+      createdAt: Date.now(),
+      seedId: state.seeds[0]?.id,
+    };
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "mirror",
+      payload: { bead, targetId },
+      timestamp: Date.now(),
+      durationMs: 1000,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+      setSelected([]);
+      setBeadText("");
+    } catch (err) {
+      console.error("Failed to mirror bead", err);
+    }
+  };
+
   const drawTwist = async () => {
     if (!state) return;
     try {
@@ -248,6 +284,19 @@ export default function App() {
       setSelectedPath(0);
     } catch (err) {
       console.error("Failed to request judgment", err);
+    }
+  };
+
+  const requestConcord = async () => {
+    if (!state) return;
+    try {
+      const res = await api(`/match/${state.id}/concord`, { method: "POST" });
+      const data = await res.json();
+      if (data?.cathedral) {
+        setState((s) => (s ? { ...s, cathedral: data.cathedral } : s));
+      }
+    } catch (err) {
+      console.error("Failed to request concord", err);
     }
   };
 
@@ -309,8 +358,9 @@ export default function App() {
         )}
         <div className="pt-4 space-y-2">
           <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Cast Bead</h2>
-          <label className="block text-sm text-[var(--muted)]">Modality</label>
+          <label htmlFor="cast-modality" className="block text-sm text-[var(--muted)]">Modality</label>
           <select
+            id="cast-modality"
             value={castModality}
             onChange={e => setCastModality(e.target.value as Modality)}
             className="w-full bg-zinc-900 rounded px-3 py-2"
@@ -376,7 +426,15 @@ export default function App() {
           >
             Counterpoint Selected
           </button>
+          <button
+            onClick={mirrorSelected}
+            disabled={!isMyTurn || selected.length !== 1 || !beadText.trim() || !twistAllows("mirror", castModality)}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Mirror Selected
+          </button>
           <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
+          <button onClick={requestConcord} disabled={!isMyTurn} className="w-full px-3 py-2 bg-amber-600 rounded hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">Concord</button>
           <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>
         </div>
         <p className="text-xs text-[var(--muted)] pt-4">MVP: cast text beads, bind, get a stub judgment.</p>
@@ -439,7 +497,7 @@ export default function App() {
                 <section className="lg:col-span-2">
                   <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Graph</h3>
                   <div className="mt-2">
-                    <GraphView matchId={matchId} strongPaths={scroll?.strongPaths} selectedPathIndex={selectedPath} width={600} height={400} />
+                    <GraphView matchId={matchId} state={state ?? undefined} strongPaths={scroll?.strongPaths} selectedPathIndex={selectedPath} width={600} height={400} />
                   </div>
                 </section>
               </div>
