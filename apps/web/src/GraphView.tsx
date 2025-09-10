@@ -92,8 +92,10 @@ export default function GraphView({
       .attr("stroke-width", 1.5)
       .selectAll<SVGCircleElement, Node>("circle")
       .data(nodes, (d) => d.id)
-      .join("circle")
-      .attr("id", (d) => d.id)
+      .join(
+        (enter) => enter.append("circle").attr("id", (d) => d.id),
+        (update) => update.attr("id", (d) => d.id)
+      )
       .attr("r", 10)
       .attr("fill", (d) =>
         state.cathedral && d.id === state.cathedral.id ? "#fbbf24" : "#4f46e5"
