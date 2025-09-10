@@ -51,3 +51,21 @@ test('renders cathedral node when present', async () => {
     expect(cathedralNode?.getAttribute('fill')).toBe('#fbbf24');
   });
 });
+
+test('updates when state prop changes', async () => {
+  const { container, rerender } = render(
+    <GraphView state={state} width={200} height={200} />
+  );
+  await waitFor(() => {
+    expect(container.querySelectorAll('circle').length).toBe(2);
+  });
+  const catState: GameState = {
+    ...state,
+    cathedral: { id: 'cat', content: 'summary', references: ['a'] },
+  };
+  rerender(<GraphView state={catState} width={200} height={200} />);
+  await waitFor(() => {
+    const cathedralNode = container.querySelector('#cat');
+    expect(cathedralNode).not.toBeNull();
+  });
+});

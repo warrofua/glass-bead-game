@@ -54,6 +54,13 @@ describe('App', () => {
           text: async () => '',
         });
       }
+      if (u.endsWith(`/match/${mockState.id}/concord`)) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ cathedral: { id: 'cat', content: 'C', references: ['b1'] } }),
+          text: async () => '',
+        });
+      }
       return Promise.reject(new Error('Unknown endpoint'));
     });
   });
@@ -221,5 +228,40 @@ describe('App', () => {
     await waitFor(() =>
       expect(screen.getByPlaceholderText('Share an idea...')).toHaveValue('AI idea')
     );
+  });
+
+  it('requests concord and updates graph', async () => {
+    const { container } = render(<App />);
+
+    fireEvent.change(screen.getByPlaceholderText('e.g., MagisterRex'), {
+      target: { value: 'Alice' },
+    });
+
+    fireEvent.click(screen.getByText('Create'));
+    await screen.findByText(/Seed 1/);
+
+    fireEvent.click(screen.getByText('Join'));
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining(`/match/${mockState.id}/join`),
+        expect.any(Object)
+      );
+    });
+
+    const concordButton = screen.getByRole('button', { name: 'Concord' });
+    await waitFor(() => expect(concordButton).not.toBeDisabled());
+    fireEvent.click(concordButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining(`/match/${mockState.id}/concord`),
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+
+    await waitFor(() => {
+      const cathedralNode = container.querySelector('#cat');
+      expect(cathedralNode).not.toBeNull();
+    });
   });
 });
