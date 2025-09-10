@@ -14,6 +14,8 @@ interface Link extends d3.SimulationLinkDatum<Node> {
 export interface GraphViewProps {
   /** Match id to connect to websocket and receive live state */
   matchId?: string;
+  /** Game state provided directly, bypassing websocket */
+  state?: GameState;
   /** Initial state to render if websocket not used */
   initialState?: GameState;
   /** Strong paths from judgment scroll for highlighting */
@@ -30,6 +32,7 @@ export interface GraphViewProps {
 
 export default function GraphView({
   matchId,
+  state: propState,
   initialState,
   strongPaths,
   selectedPathIndex,
@@ -38,7 +41,11 @@ export default function GraphView({
   width = 800,
   height = 600,
 }: GraphViewProps) {
-  const { state } = useMatchState(matchId, { initialState });
+  const { state: liveState } = useMatchState(matchId, {
+    initialState,
+    autoConnect: !propState,
+  });
+  const state = propState || liveState;
   const svgRef = useRef<SVGSVGElement | null>(null);
   const simulationRef = useRef<d3.Simulation<Node, Link> | null>(null);
 
