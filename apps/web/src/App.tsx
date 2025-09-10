@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import type { GameState, Bead, Move, JudgmentScroll } from "@gbg/types";
+import type { GameState, Bead, Move, JudgmentScroll, Modality } from "@gbg/types";
 import GraphView from "./GraphView";
 import Ladder from "./Ladder";
 import useMatchState from "./hooks/useMatchState";
@@ -26,15 +26,20 @@ export default function App() {
   const [scroll, setScroll] = useState<JudgmentScroll | null>(null);
   const [selectedPath, setSelectedPath] = useState<number>(0);
   const [beadText, setBeadText] = useState("");
+  const [castModality, setCastModality] = useState<Modality>("text");
+  const [transmuteTarget, setTransmuteTarget] = useState<string | null>(null);
+  const [transmuteModality, setTransmuteModality] = useState<Modality>("text");
+  const [transmuteText, setTransmuteText] = useState("");
   const [tab, setTab] = useState<'weave' | 'ladder'>('weave');
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
+  const modalities: Modality[] = ["text", "image", "audio", "math", "code", "data"];
 
-  const twistAllows = (type: Move["type"]): boolean => {
+  const twistAllows = (type: Move["type"], modality: Modality = "text"): boolean => {
     const effect = state?.twist?.effect;
     if (!effect) return true;
-    if ((type === "cast" || type === "mirror" || type === "counterpoint") && effect.modalityLock && !effect.modalityLock.includes("text")) return false;
+    if ((type === "cast" || type === "mirror" || type === "counterpoint" || type === "transmute") && effect.modalityLock && !effect.modalityLock.includes(modality)) return false;
     if ((type === "bind" || type === "counterpoint") && effect.requiredRelation) {
       const label = type === "bind" ? "analogy" : "motif-echo";
       if (label !== effect.requiredRelation) return false;
@@ -81,14 +86,14 @@ export default function App() {
   };
 
   const castBead = async () => {
-    if (!playerId || !state || !twistAllows("cast")) return;
+    if (!playerId || !state || !twistAllows("cast", castModality)) return;
     const text = beadText.trim();
     if (!text || text.length > 500) return;
     const beadId = `b_${Math.random().toString(36).slice(2, 8)}`;
     const bead: Bead = {
       id: beadId,
       ownerId: playerId,
-      modality: "text",
+      modality: castModality,
       title: "Idea",
       content: text,
       complexity: 1,
@@ -116,6 +121,10 @@ export default function App() {
   };
 
   const [selected, setSelected] = useState<string[]>([]);
+
+  useEffect(() => {
+    setTransmuteTarget(selected.length === 1 ? selected[0] : null);
+  }, [selected]);
 
   const toggleSelect = (id: string) => {
     setSelected(sel => {
@@ -178,6 +187,32 @@ export default function App() {
       setSelected([]);
     } catch (err) {
       console.error("Failed to counterpoint beads", err);
+    }
+  };
+
+  const transmuteSelected = async () => {
+    if (!playerId || !state || !transmuteTarget || !twistAllows("transmute", transmuteModality)) return;
+    const payload: any = { beadId: transmuteTarget, modality: transmuteModality };
+    const content = transmuteText.trim();
+    if (content) payload.content = content;
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "transmute",
+      payload,
+      timestamp: Date.now(),
+      durationMs: 800,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+      setTransmuteText("");
+      setSelected([]);
+    } catch (err) {
+      console.error("Failed to transmute bead", err);
     }
   };
 
@@ -274,6 +309,16 @@ export default function App() {
         )}
         <div className="pt-4 space-y-2">
           <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Cast Bead</h2>
+          <label className="block text-sm text-[var(--muted)]">Modality</label>
+          <select
+            value={castModality}
+            onChange={e => setCastModality(e.target.value as Modality)}
+            className="w-full bg-zinc-900 rounded px-3 py-2"
+          >
+            {modalities.map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
           <textarea
             value={beadText}
             onChange={e => setBeadText(e.target.value)}
@@ -289,10 +334,33 @@ export default function App() {
           </button>
           <button
             onClick={castBead}
-            disabled={!beadText.trim() || !isMyTurn || !twistAllows("cast")}
+            disabled={!beadText.trim() || !isMyTurn || !twistAllows("cast", castModality)}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cast Bead
+          </button>
+          <label className="block text-sm text-[var(--muted)]">Transmute Modality</label>
+          <select
+            value={transmuteModality}
+            onChange={e => setTransmuteModality(e.target.value as Modality)}
+            className="w-full bg-zinc-900 rounded px-3 py-2"
+          >
+            {modalities.map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+          <textarea
+            value={transmuteText}
+            onChange={e => setTransmuteText(e.target.value)}
+            className="w-full bg-zinc-900 rounded px-3 py-2 h-24"
+            placeholder="New content..."
+          />
+          <button
+            onClick={transmuteSelected}
+            disabled={!isMyTurn || !transmuteTarget || !twistAllows("transmute", transmuteModality)}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Transmute Selected
           </button>
           <button
             onClick={bindSelected}
