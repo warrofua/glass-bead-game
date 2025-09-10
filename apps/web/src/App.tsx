@@ -11,6 +11,34 @@ import GraphView from "./GraphView";
 import Ladder from "./Ladder";
 import useMatchState from "./hooks/useMatchState";
 
+const AXIS_INFO = {
+  resonance: {
+    label: "Resonance",
+    desc: "Semantic cohesion between connected beads",
+    weight: 0.3,
+  },
+  novelty: {
+    label: "Novelty",
+    desc: "Rarity of n-grams vs baseline corpus",
+    weight: 0.2,
+  },
+  integrity: {
+    label: "Integrity",
+    desc: "Lack of contradictions between beads",
+    weight: 0.2,
+  },
+  aesthetics: {
+    label: "Aesthetics",
+    desc: "Beauty via bead contributions",
+    weight: 0.2,
+  },
+  resilience: {
+    label: "Resilience",
+    desc: "Structural robustness of the web",
+    weight: 0.1,
+  },
+} as const;
+
 // Helper around fetch that only sets the JSON content type when a body is
 // present (Fastify returns 400 on an empty JSON body) and throws on HTTP
 // errors.
@@ -663,10 +691,17 @@ export default function App() {
                 <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Judgment</h3>
                   <div className="mt-2 text-sm">
                     <div className="mb-2">Winner: {scroll.winner || "TBD"}</div>
-                    <ul className="space-y-1">
+                    <ul className="space-y-2">
                       {Object.entries(scroll.scores).map(([pid, s]) => (
                         <li key={pid} className="text-xs">
-                          <b>{pid}</b>: {(s.total * 100).toFixed(1)}% (res {s.resonance.toFixed(2)}, nov {s.novelty.toFixed(2)}, int {s.integrity.toFixed(2)}, aes {s.aesthetics.toFixed(2)}, res {s.resilience.toFixed(2)})
+                          <div><b>{pid}</b>: {(s.total * 100).toFixed(1)}%</div>
+                          <ul className="ml-4 space-y-0.5">
+                            {Object.entries(AXIS_INFO).map(([axis, info]) => (
+                              <li key={axis}>
+                                {info.label}: {(s[axis as keyof typeof AXIS_INFO] * 100).toFixed(1)}% × {Math.round(info.weight * 100)}% = {(s.contributions[axis as keyof typeof AXIS_INFO] * 100).toFixed(1)}% – {info.desc}
+                              </li>
+                            ))}
+                          </ul>
                         </li>
                       ))}
                     </ul>

@@ -55,7 +55,19 @@ export interface GameState {
 }
 
 export interface JudgedScores {
-  resonance: number; aesthetics: number; novelty: number; integrity: number; resilience: number;
+  resonance: number;
+  aesthetics: number;
+  novelty: number;
+  integrity: number;
+  resilience: number;
+  /** Weighted contribution of each axis to the total score */
+  contributions: {
+    resonance: number;
+    aesthetics: number;
+    novelty: number;
+    integrity: number;
+    resilience: number;
+  };
   total: number;
 }
 

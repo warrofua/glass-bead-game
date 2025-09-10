@@ -4,28 +4,40 @@ function tokenize(text: string): string[] {
   return text.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
 }
 
-function jaccard(a: string[], b: string[]): number {
-  const setA = new Set(a);
-  const setB = new Set(b);
-  const intersection = [...setA].filter((x) => setB.has(x));
-  const union = new Set([...a, ...b]);
-  return union.size === 0 ? 0 : intersection.length / union.size;
+// Simple bag-of-words embedding with cosine similarity. This avoids network
+// calls while still providing a semantic signal stronger than set overlap.
+function embed(text: string): Map<string, number> {
+  const vec = new Map<string, number>();
+  for (const tok of tokenize(text)) vec.set(tok, (vec.get(tok) || 0) + 1);
+  // normalise for cosine similarity
+  const norm = Math.sqrt([...vec.values()].reduce((s, v) => s + v * v, 0)) || 1;
+  for (const [k, v] of vec) vec.set(k, v / norm);
+  return vec;
+}
+
+function cosine(a: Map<string, number>, b: Map<string, number>): number {
+  let dot = 0;
+  for (const [k, v] of a) {
+    const bv = b.get(k);
+    if (bv) dot += v * bv;
+  }
+  return dot;
 }
 
 /**
  * Resonance measures semantic cohesion between connected beads using a
- * lightweight embedding approximation via token overlap.
+ * lightweight embedding based on cosine similarity of bag-of-words vectors.
  */
 export function score(state: GameState, playerId: string): number {
   const edges = Object.values(state.edges).filter(
-    (e) => state.beads[e.from]?.ownerId === playerId || state.beads[e.to]?.ownerId === playerId
+    e => state.beads[e.from]?.ownerId === playerId || state.beads[e.to]?.ownerId === playerId
   );
   if (edges.length === 0) return 0;
   let total = 0;
   for (const e of edges) {
-    const a = tokenize(state.beads[e.from]?.content || '');
-    const b = tokenize(state.beads[e.to]?.content || '');
-    total += jaccard(a, b);
+    const a = embed(state.beads[e.from]?.content || '');
+    const b = embed(state.beads[e.to]?.content || '');
+    total += cosine(a, b);
   }
   return total / edges.length;
 }
