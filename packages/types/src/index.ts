@@ -272,4 +272,4 @@ export function replayMoves(initial: GameState, moves: Move[]): GameState {
 }
 
 // graph utilities
-export * from './graph';
+export * from './graph.js';
