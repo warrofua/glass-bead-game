@@ -67,31 +67,30 @@ export default function App() {
   };
 
   const canAfford = (type: Move["type"]) => !!remainingResources(type);
+  const relationLabelMap: Partial<Record<Move["type"], string>> = {
+    bind: "analogy",
+    counterpoint: "motif-echo",
+  };
+
+  const justificationMap: Partial<Record<Move["type"], string>> = {
+    bind: "Two features align; one disanalogy is noted.",
+    counterpoint: "Inverted motif. Counter view.",
+    canonize: "",
+    refute: "",
+  };
 
   const twistAllows = (type: Move["type"]): boolean => {
     const effect = state?.twist?.effect;
     if (!effect) return true;
-    if ((type === "cast" || type === "mirror") && effect.modalityLock && !effect.modalityLock.includes(beadModality)) return false;
     if (
-      (type === "bind" || type === "counterpoint" || type === "canonize" || type === "refute") &&
-      effect.requiredRelation
-    ) {
-      const labelMap: Record<string, string> = {
-        bind: "analogy",
-        counterpoint: "motif-echo",
-        canonize: "proof",
-        refute: "refutation",
-      };
-      const label = labelMap[type];
-      if (label && label !== effect.requiredRelation) return false;
-    }
-    if ((type === "bind" || type === "counterpoint" || type === "canonize" || type === "refute") && effect.justificationLimit) {
-      const justificationMap: Record<string, string> = {
-        bind: "Two features align; one disanalogy is noted.",
-        counterpoint: "Inverted motif. Counter view.",
-        canonize: "",
-        refute: "",
-      };
+      (type === "cast" || type === "mirror") &&
+      effect.modalityLock &&
+      !effect.modalityLock.includes(beadModality)
+    )
+      return false;
+    const label = relationLabelMap[type];
+    if (label && effect.requiredRelation && label !== effect.requiredRelation) return false;
+    if (effect.justificationLimit) {
       const justification = justificationMap[type] ?? "";
       if (justification.length > effect.justificationLimit) return false;
     }
