@@ -2,21 +2,37 @@
 
 # Glass Bead Game - Development Environment Startup Script
 # This script sets up the development environment by:
-# 1. Pulling latest changes from main branch
+# 1. (Optional) Pulling latest changes from main branch
 # 2. Installing dependencies
 # 3. Building all packages
 # 4. Starting the development server
+#
+# Usage: ./start-dev.sh [--pull]
+#   --pull    Pull latest changes from origin/main before continuing
 
 set -e  # Exit on any error
 
 echo "🚀 Starting Glass Bead Game Development Environment..."
 echo ""
 
-# Step 1: Git pull from main
-echo "📥 Pulling latest changes from origin/main..."
-git pull origin main
-echo "✅ Git pull completed"
-echo ""
+# Parse flags
+PULL=false
+for arg in "$@"; do
+  if [[ "$arg" == "--pull" ]]; then
+    PULL=true
+  fi
+done
+
+# Step 1: (Optional) Git pull from main
+if $PULL; then
+  echo "📥 Pulling latest changes from origin/main..."
+  git pull origin main
+  echo "✅ Git pull completed"
+  echo ""
+else
+  echo "⏭️  Skipping git pull (use --pull to update)"
+  echo ""
+fi
 
 # Step 2: Install dependencies
 echo "📦 Installing dependencies..."

@@ -22,8 +22,8 @@ npm install
 npm run dev
 # web: http://localhost:5173  |  server: http://localhost:8787
 ```
-Or run `./start-dev.sh` to pull, install, build, and launch everything automatically.
-If `npm install` fails with `Unsupported URL Type "workspace:"`, replace any `workspace:*` entries in subpackage `package.json`
+Or run `./start-dev.sh` to install, build, and launch everything automatically.
+Use `--pull` to fetch the latest main branch first.
 files with relative `file:` links (e.g., `file:../../packages/types`).
 Open two browser windows, choose distinct handles, and join/create the same match ID.
 To export a match log for replay or analysis, use the **Export Log** button in the UI or `GET /match/{id}/log`.
