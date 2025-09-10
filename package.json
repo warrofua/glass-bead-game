@@ -7,7 +7,7 @@
     "dev:web": "npm --workspace apps/web run dev",
     "dev:server": "npm --workspace apps/server run dev",
     "dev:types": "npm --workspace packages/types run dev",
-    "build": "npm-run-all -p build:*",
+    "build": "npm-run-all build:types && npm-run-all -p build:web build:server",
     "build:web": "npm --workspace apps/web run build",
     "build:server": "npm --workspace apps/server run build",
     "build:types": "npm --workspace packages/types run build",
