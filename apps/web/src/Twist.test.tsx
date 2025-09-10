@@ -65,7 +65,7 @@ describe('Twist UI', () => {
     const bead2 = await screen.findByTestId('bead-b2');
     fireEvent.click(bead1);
     fireEvent.click(bead2);
-    const bindButton = screen.getByRole('button', { name: 'Bind Selected' });
+    const bindButton = screen.getByRole('button', { name: 'Bind Selected (-1 Restraint)' });
     expect(bindButton).not.toBeDisabled();
 
     fireEvent.click(screen.getByText('Draw Twist'));
