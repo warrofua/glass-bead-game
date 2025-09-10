@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { startServer } from './server.helper.js';
+import type { ChildProcess } from 'node:child_process';
 
 test('players can join a match and be listed in state', async (t) => {
   const { server, port } = await startServer();
@@ -33,12 +34,22 @@ test('players can join a match and be listed in state', async (t) => {
 });
 
 test('match handles all move types and returns AI judgment', async (t) => {
+  const prevModel = process.env.LLM_MODEL;
   process.env.LLM_MODEL = 'test';
-  const { server, port } = await startServer();
+
+  let server: ChildProcess;
   t.after(() => {
-    server.kill();
-    delete process.env.LLM_MODEL;
+    server?.kill();
+    if (prevModel === undefined) {
+      delete process.env.LLM_MODEL;
+    } else {
+      process.env.LLM_MODEL = prevModel;
+    }
   });
+
+  const started = await startServer();
+  server = started.server;
+  const port = started.port;
 
   const base = `http://127.0.0.1:${port}`;
 
