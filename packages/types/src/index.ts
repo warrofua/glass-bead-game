@@ -123,7 +123,7 @@ export function validateSeed(seed: Seed): boolean {
  */
 export interface ValidationResult { ok: boolean; error?: string }
 
-const MOVE_COSTS: Record<MoveType, { insight?: number; restraint?: number }> = {
+export const MOVE_COSTS: Record<MoveType, { insight?: number; restraint?: number }> = {
   cast: { insight: 1 },
   bind: { restraint: 1 },
   transmute: { insight: 1 },
@@ -272,4 +272,4 @@ export function replayMoves(initial: GameState, moves: Move[]): GameState {
 }
 
 // graph utilities
-export * from './graph.js';
+export * from './graph';
