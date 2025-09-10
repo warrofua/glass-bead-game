@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import type { GameState, Bead, Move, JudgmentScroll } from "@gbg/types";
+import type { GameState, Bead, Move, JudgmentScroll, Modality } from "@gbg/types";
 import GraphView from "./GraphView";
 import Ladder from "./Ladder";
 import useMatchState from "./hooks/useMatchState";
@@ -26,6 +26,7 @@ export default function App() {
   const [scroll, setScroll] = useState<JudgmentScroll | null>(null);
   const [selectedPath, setSelectedPath] = useState<number>(0);
   const [beadText, setBeadText] = useState("");
+  const [beadModality, setBeadModality] = useState<Modality>("text");
   const [tab, setTab] = useState<'weave' | 'ladder'>('weave');
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
@@ -34,7 +35,7 @@ export default function App() {
   const twistAllows = (type: Move["type"]): boolean => {
     const effect = state?.twist?.effect;
     if (!effect) return true;
-    if ((type === "cast" || type === "mirror" || type === "counterpoint") && effect.modalityLock && !effect.modalityLock.includes("text")) return false;
+    if ((type === "cast" || type === "mirror") && effect.modalityLock && !effect.modalityLock.includes(beadModality)) return false;
     if ((type === "bind" || type === "counterpoint") && effect.requiredRelation) {
       const label = type === "bind" ? "analogy" : "motif-echo";
       if (label !== effect.requiredRelation) return false;
@@ -81,14 +82,14 @@ export default function App() {
   };
 
   const castBead = async () => {
-    if (!playerId || !state || !twistAllows("cast")) return;
+    if (!playerId || !state || beadModality !== "text" || !twistAllows("cast")) return;
     const text = beadText.trim();
     if (!text || text.length > 500) return;
     const beadId = `b_${Math.random().toString(36).slice(2, 8)}`;
     const bead: Bead = {
       id: beadId,
       ownerId: playerId,
-      modality: "text",
+      modality: beadModality,
       title: "Idea",
       content: text,
       complexity: 1,
@@ -178,6 +179,42 @@ export default function App() {
       setSelected([]);
     } catch (err) {
       console.error("Failed to counterpoint beads", err);
+    }
+  };
+
+  const mirrorSelected = async () => {
+    if (!playerId || !state || selected.length !== 1 || !beadText.trim() || !twistAllows("mirror")) return;
+    const targetId = selected[0];
+    const text = beadText.trim();
+    const beadId = `b_${Math.random().toString(36).slice(2, 8)}`;
+    const bead: Bead = {
+      id: beadId,
+      ownerId: playerId,
+      modality: beadModality,
+      title: "Mirror",
+      content: text,
+      complexity: 1,
+      createdAt: Date.now(),
+      seedId: state.seeds[0]?.id,
+    };
+    const move: Move = {
+      id: `m_${Math.random().toString(36).slice(2,8)}`,
+      playerId,
+      type: "mirror",
+      payload: { bead, targetId },
+      timestamp: Date.now(),
+      durationMs: 1000,
+      valid: true,
+    };
+    try {
+      await api(`/match/${state.id}/move`, {
+        method: "POST",
+        body: JSON.stringify(move),
+      });
+      setSelected([]);
+      setBeadText("");
+    } catch (err) {
+      console.error("Failed to mirror bead", err);
     }
   };
 
@@ -280,6 +317,20 @@ export default function App() {
             className="w-full bg-zinc-900 rounded px-3 py-2 h-24"
             placeholder="Share an idea..."
           />
+          <label htmlFor="modality" className="block text-sm text-[var(--muted)] mt-2">Modality</label>
+          <select
+            id="modality"
+            value={beadModality}
+            onChange={e => setBeadModality(e.target.value as Modality)}
+            className="w-full bg-zinc-900 rounded px-3 py-2"
+          >
+            <option value="text">text</option>
+            <option value="image">image</option>
+            <option value="audio">audio</option>
+            <option value="math">math</option>
+            <option value="code">code</option>
+            <option value="data">data</option>
+          </select>
           <button
             onClick={suggestBead}
             disabled={!isMyTurn}
@@ -289,7 +340,7 @@ export default function App() {
           </button>
           <button
             onClick={castBead}
-            disabled={!beadText.trim() || !isMyTurn || !twistAllows("cast")}
+            disabled={!beadText.trim() || beadModality !== 'text' || !isMyTurn || !twistAllows("cast")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cast Bead
@@ -307,6 +358,13 @@ export default function App() {
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Counterpoint Selected
+          </button>
+          <button
+            onClick={mirrorSelected}
+            disabled={!isMyTurn || selected.length !== 1 || !beadText.trim() || !twistAllows("mirror")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Mirror Selected
           </button>
           <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
           <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>
