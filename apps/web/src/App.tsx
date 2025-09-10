@@ -26,7 +26,6 @@ export default function App() {
   const [scroll, setScroll] = useState<JudgmentScroll | null>(null);
   const [selectedPath, setSelectedPath] = useState<number>(0);
   const [beadText, setBeadText] = useState("");
-  const [castModality, setCastModality] = useState<Modality>("text");
   const [transmuteTarget, setTransmuteTarget] = useState<string | null>(null);
   const [transmuteModality, setTransmuteModality] = useState<Modality>("text");
   const [transmuteText, setTransmuteText] = useState("");
@@ -86,14 +85,14 @@ export default function App() {
   };
 
   const castBead = async () => {
-    if (!playerId || !state || !twistAllows("cast", castModality)) return;
+    if (!playerId || !state || !twistAllows("cast")) return;
     const text = beadText.trim();
     if (!text || text.length > 500) return;
     const beadId = `b_${Math.random().toString(36).slice(2, 8)}`;
     const bead: Bead = {
       id: beadId,
       ownerId: playerId,
-      modality: castModality,
+      modality: "text",
       title: "Idea",
       content: text,
       complexity: 1,
@@ -309,16 +308,7 @@ export default function App() {
         )}
         <div className="pt-4 space-y-2">
           <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Cast Bead</h2>
-          <label className="block text-sm text-[var(--muted)]">Modality</label>
-          <select
-            value={castModality}
-            onChange={e => setCastModality(e.target.value as Modality)}
-            className="w-full bg-zinc-900 rounded px-3 py-2"
-          >
-            {modalities.map(m => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
+            {/* Modality selection hidden until backend supports non-text casting */}
           <textarea
             value={beadText}
             onChange={e => setBeadText(e.target.value)}
@@ -334,7 +324,7 @@ export default function App() {
           </button>
           <button
             onClick={castBead}
-            disabled={!beadText.trim() || !isMyTurn || !twistAllows("cast", castModality)}
+              disabled={!beadText.trim() || !isMyTurn || !twistAllows("cast")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cast Bead
