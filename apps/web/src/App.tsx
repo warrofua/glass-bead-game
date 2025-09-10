@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import type { GameState, Bead, Move, JudgmentScroll, Modality } from "@gbg/types";
+import {
+  MOVE_COSTS,
+  type GameState,
+  type Bead,
+  type Move,
+  type JudgmentScroll,
+  type Modality,
+} from "@gbg/types";
 import GraphView from "./GraphView";
 import Ladder from "./Ladder";
 import useMatchState from "./hooks/useMatchState";
@@ -31,6 +38,35 @@ export default function App() {
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
+
+  const remainingResources = (type: Move["type"]) => {
+    if (!currentPlayer) return null;
+    const cost = MOVE_COSTS[type] ?? {};
+    let { insight, restraint, wildAvailable } = currentPlayer.resources;
+    if (cost.insight) {
+      if (insight >= cost.insight) {
+        insight -= cost.insight;
+      } else if (wildAvailable) {
+        wildAvailable = false;
+        insight = 0;
+      } else {
+        return null;
+      }
+    }
+    if (cost.restraint) {
+      if (restraint >= cost.restraint) {
+        restraint -= cost.restraint;
+      } else if (wildAvailable) {
+        wildAvailable = false;
+        restraint = 0;
+      } else {
+        return null;
+      }
+    }
+    return { insight, restraint, wildAvailable };
+  };
+
+  const canAfford = (type: Move["type"]) => !!remainingResources(type);
 
   const twistAllows = (type: Move["type"]): boolean => {
     const effect = state?.twist?.effect;
@@ -302,6 +338,11 @@ export default function App() {
             <p className="text-sm mt-1">
               {currentPlayer?.handle || currentPlayer?.id || ""} {isMyTurn && "(your turn)"}
             </p>
+            {currentPlayer && (
+              <p className="text-xs mt-1">
+                Insight: {currentPlayer.resources.insight}, Restraint: {currentPlayer.resources.restraint}, Wild: {currentPlayer.resources.wildAvailable ? 1 : 0}
+              </p>
+            )}
           </div>
         )}
         <div className="pt-4">
@@ -353,21 +394,27 @@ export default function App() {
           </button>
           <button
             onClick={castBead}
-            disabled={!beadText.trim() || beadModality !== 'text' || !isMyTurn || !twistAllows("cast")}
+            disabled={
+              !beadText.trim() ||
+              beadModality !== "text" ||
+              !isMyTurn ||
+              !twistAllows("cast") ||
+              !canAfford("cast")
+            }
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cast Bead
           </button>
           <button
             onClick={bindSelected}
-            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("bind")}
+            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("bind") || !canAfford("bind")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Bind Selected
           </button>
           <button
             onClick={counterpointSelected}
-            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("counterpoint")}
+            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("counterpoint") || !canAfford("counterpoint")}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Counterpoint Selected
