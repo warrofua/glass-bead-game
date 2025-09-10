@@ -15,6 +15,7 @@ import registerMoveRoute from "./routes/move.js";
 import registerConcordRoute from "./routes/concord.js";
 import judge from "./judge/index.js";
 import judgeWithLLM from "./judge/llm.js";
+import generateSeeds from "./seeds.js";
 import { Ollama } from "ollama";
 
 const fastify = Fastify({ logger: false });
@@ -28,14 +29,6 @@ const ratings = new Map<string, { wins: number; losses: number }>();
 
 // --- Utility
 function now(){ return Date.now(); }
-function sampleSeeds(): GameState["seeds"]{
-  const seeds = [
-    {id:"s1", text:"Kepler's 3rd law", domain:"astronomy"},
-    {id:"s2", text:"West African kente patterns", domain:"textiles"},
-    {id:"s3", text:"Amnesty", domain:"civics"}
-  ];
-  return seeds;
-}
 
 function sampleTwists(): ConstraintCard[]{
   return [
@@ -98,8 +91,9 @@ function logMetrics(matchId: string, move: Move, state: GameState){
 // --- REST Endpoints
 fastify.post("/match", async (req, reply) => {
   const id = randomUUID().slice(0,8);
+  const seeds = await generateSeeds();
   const state: GameState = {
-    id, round: 1, phase:"SeedDraw", players: [], currentPlayerId: undefined, seeds: sampleSeeds(),
+    id, round: 1, phase:"SeedDraw", players: [], currentPlayerId: undefined, seeds,
     beads: {}, edges: {}, moves: [], twistDeck: sampleTwists(), createdAt: now(), updatedAt: now()
   };
   matches.set(id, state);
