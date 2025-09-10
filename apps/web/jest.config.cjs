@@ -17,6 +17,6 @@ module.exports = {
     '^.+\\.(js|jsx)$': 'babel-jest',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(d3|d3-[^/]+|internmap|delaunator|robust-predicates)/)',
+    'node_modules/(?!(d3|d3-[^/]+|internmap|delaunator|robust-predicates|marked)/)',
   ]
 };
