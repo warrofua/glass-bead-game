@@ -28,9 +28,28 @@ export function judge(state: GameState): JudgmentScroll {
     const i = integrity(state, p.id);
     const a = aesthetics(slice);
     const rs = resilience(slice);
-    const total = WEIGHTS.resonance * r + WEIGHTS.novelty * n +
-      WEIGHTS.integrity * i + WEIGHTS.aesthetics * a + WEIGHTS.resilience * rs;
-    scores[p.id] = { resonance: r, novelty: n, integrity: i, aesthetics: a, resilience: rs, total };
+    const contributions = {
+      resonance: WEIGHTS.resonance * r,
+      novelty: WEIGHTS.novelty * n,
+      integrity: WEIGHTS.integrity * i,
+      aesthetics: WEIGHTS.aesthetics * a,
+      resilience: WEIGHTS.resilience * rs,
+    } as const;
+    const total =
+      contributions.resonance +
+      contributions.novelty +
+      contributions.integrity +
+      contributions.aesthetics +
+      contributions.resilience;
+    scores[p.id] = {
+      resonance: r,
+      novelty: n,
+      integrity: i,
+      aesthetics: a,
+      resilience: rs,
+      contributions,
+      total,
+    };
   }
 
   const graph: GraphState = { beads: {}, edges: {}, outbound: {}, inbound: {} };
