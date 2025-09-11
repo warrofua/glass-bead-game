@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+jest.mock('../api', () => ({ WS_BASE: 'ws://localhost:8787' }));
 import useMatchState from './useMatchState';
 import type { GameState } from '@gbg/types';
 

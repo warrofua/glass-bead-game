@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, waitFor } from '@testing-library/react';
+jest.mock('./api', () => ({ __esModule: true, WS_BASE: 'ws://localhost:8787' }));
 import GraphView from './GraphView';
 import type { GameState } from '@gbg/types';
 

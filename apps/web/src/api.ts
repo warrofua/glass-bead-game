@@ -4,6 +4,8 @@ const API_BASE =
   (typeof process !== "undefined" && process.env.VITE_API_BASE) ||
   "http://localhost:8787";
 
+const WS_BASE = API_BASE.replace(/^http/, "ws");
+
 export const api = async (path: string, opts: RequestInit = {}) => {
   const headers = opts.body
     ? { "Content-Type": "application/json", ...(opts.headers || {}) }
@@ -16,5 +18,5 @@ export const api = async (path: string, opts: RequestInit = {}) => {
   return res;
 };
 
-export { API_BASE };
+export { API_BASE, WS_BASE };
 export default api;
