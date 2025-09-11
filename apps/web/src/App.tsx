@@ -636,7 +636,10 @@ export default function App() {
           <button onClick={requestConcord} disabled={!isMyTurn} className="w-full px-3 py-2 bg-amber-600 rounded hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">Concord</button>
           <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>
         </div>
-        <p className="text-xs text-[var(--muted)] pt-4">MVP: cast text beads, bind, get a stub judgment.</p>
+        <p className="text-xs text-[var(--muted)] pt-4">
+          Moves: cast, bind, counterpoint, mirror, lift, canonize, refute, prune, joker. Features: twists, AI suggestions,
+          judgment, concord.
+        </p>
       </aside>
 
       <main className="bg-[var(--panel)] rounded-2xl p-4 shadow">
