@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import api from "./api";
 
 interface Rating {
   handle: string;
@@ -13,7 +14,7 @@ export default function Ladder() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("http://localhost:8787/ratings");
+        const res = await api("/ratings");
         if (res.ok) {
           const data = await res.json();
           setStandings(data);
