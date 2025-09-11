@@ -18,6 +18,13 @@ test('twist rejects bind with wrong relation', async (t) => {
     }).then(r => r.json());
 
   const p1 = await join('A');
+  const p2 = await join('B');
+
+  const dummy = async () => {
+    const bead = { id:`b_${Math.random().toString(36).slice(2,8)}`, ownerId:p2.id, modality:'text', content:'x', complexity:1, createdAt: Date.now() };
+    const move = { id:`m_${Math.random().toString(36).slice(2,8)}`, playerId:p2.id, type:'cast', payload:{ bead }, timestamp:Date.now(), durationMs:0, valid:true };
+    await fetch(`${base}/match/${matchId}/move`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(move) });
+  };
 
   const castBead = async (id:string) => {
     const bead = { id, ownerId: p1.id, modality: 'text', content: 'x', complexity:1, createdAt: Date.now() };
@@ -28,7 +35,9 @@ test('twist rejects bind with wrong relation', async (t) => {
   const b1 = `b_${Math.random().toString(36).slice(2,8)}`;
   const b2 = `b_${Math.random().toString(36).slice(2,8)}`;
   await castBead(b1);
+  await dummy();
   await castBead(b2);
+  await dummy();
 
   // draw twists twice to reach requiredRelation twist
   await fetch(`${base}/match/${matchId}/twist`, { method:'POST' });

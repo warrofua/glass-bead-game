@@ -22,6 +22,32 @@ test('concord builds cathedral from highest path', async (t) => {
     }).then((r) => r.json());
 
   const p1 = await join('Alice');
+  const p2 = await join('Bob');
+
+  const dummy = async () => {
+    const bead = {
+      id: randomId('b'),
+      ownerId: p2.id,
+      modality: 'text',
+      content: 'dummy',
+      complexity: 1,
+      createdAt: Date.now(),
+    };
+    const move = {
+      id: randomId('m'),
+      playerId: p2.id,
+      type: 'cast' as const,
+      payload: { bead },
+      timestamp: Date.now(),
+      durationMs: 0,
+      valid: true,
+    };
+    await fetch(`${base}/match/${matchId}/move`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(move),
+    });
+  };
 
   const castBead = async (id: string, title: string) => {
     const bead = {
@@ -52,7 +78,9 @@ test('concord builds cathedral from highest path', async (t) => {
   const b1 = randomId('b');
   const b2 = randomId('b');
   await castBead(b1, 'First');
+  await dummy();
   await castBead(b2, 'Second');
+  await dummy();
 
   const bindMove = {
     id: randomId('m'),
