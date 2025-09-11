@@ -1,5 +1,10 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+jest.mock('./api', () => ({
+  __esModule: true,
+  default: (path: string, opts?: RequestInit) => fetch(`http://localhost:8787${path}`, opts),
+  api: (path: string, opts?: RequestInit) => fetch(`http://localhost:8787${path}`, opts),
+}));
 import Ladder from './Ladder';
 
 describe('Ladder', () => {

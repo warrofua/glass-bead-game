@@ -12,6 +12,7 @@ import { marked } from "marked";
 import GraphView from "./GraphView";
 import Ladder from "./Ladder";
 import useMatchState from "./hooks/useMatchState";
+import api from "./api";
 
 const AXIS_INFO = {
   resonance: {
@@ -41,20 +42,6 @@ const AXIS_INFO = {
   },
 } as const;
 
-// Helper around fetch that only sets the JSON content type when a body is
-// present (Fastify returns 400 on an empty JSON body) and throws on HTTP
-// errors.
-const api = async (path: string, opts: RequestInit = {}) => {
-  const headers = opts.body
-    ? { "Content-Type": "application/json", ...(opts.headers || {}) }
-    : opts.headers;
-  const res = await fetch(`http://localhost:8787${path}`, { ...opts, headers });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `Request failed with ${res.status}`);
-  }
-  return res;
-};
 
 export default function App() {
   const [matchId, setMatchId] = useState<string>(() => localStorage.getItem("matchId") || "");

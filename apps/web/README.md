@@ -9,6 +9,15 @@ storage for convenience. An AI suggestion button can propose bead ideas, and
 match state is managed by the `useMatchState` hook to keep the UI in sync via
 WebSockets.
 
+## Configuration
+
+Create an `.env` file to override defaults. To point the client at a different
+API server, set `VITE_API_BASE` (defaults to `http://localhost:8787`):
+
+```bash
+VITE_API_BASE=http://localhost:8787
+```
+
 ## Development
 
 Run workspace scripts from the repository root:
