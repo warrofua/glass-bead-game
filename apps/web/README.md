@@ -28,3 +28,19 @@ npm --workspace apps/web run test
 ```
 
 The built assets will be output to `dist/`.
+
+## Refresh build
+
+After pulling new code, refresh the build to pick up new buttons and dropdowns.
+From the repository root run one of:
+
+```bash
+npm --workspace apps/web run dev
+# or
+npm --workspace apps/web run build
+# or
+./start-dev.sh
+```
+
+If the interface still shows the old layout, clear your browser cache or
+restart Vite.
