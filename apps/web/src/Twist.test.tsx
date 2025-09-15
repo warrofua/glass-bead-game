@@ -4,6 +4,7 @@ jest.mock('./api', () => ({
   __esModule: true,
   default: (path: string, opts?: RequestInit) => fetch(`http://localhost:8787${path}`, opts),
   api: (path: string, opts?: RequestInit) => fetch(`http://localhost:8787${path}`, opts),
+  WS_BASE: 'ws://localhost:8787',
 }));
 import App from './App';
 
