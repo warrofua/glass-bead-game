@@ -46,6 +46,9 @@ export default function registerMoveRoute(
           );
         }
       }
+      if (state.players.length < 2) {
+        return reply.code(400).send({ error: "Need two players to proceed" });
+      }
       const validation = validateMove(move, state);
       if (!validation.ok) {
         return reply.code(400).send({ error: validation.error });

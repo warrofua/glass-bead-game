@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameState } from "@gbg/types";
+import { WS_BASE } from "../api";
 
 interface WsMsg {
   type: string;
@@ -36,7 +37,7 @@ export default function useMatchState(
       if (!targetId) return;
       // Close any existing connection
       wsRef.current?.close();
-      const ws = new WebSocket(`ws://localhost:8787/?matchId=${targetId}`);
+      const ws = new WebSocket(`${WS_BASE}/?matchId=${targetId}`);
       ws.onmessage = (e) => {
         try {
           const msg: WsMsg = JSON.parse(e.data);
