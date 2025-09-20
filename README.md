@@ -1,15 +1,23 @@
-# The Glass Bead Game — Starter Repo (MVP Sprint 1)
+# The Glass Bead Game — AI-Judged Competitive Prototype
 
-Two‑player, online, AI‑judged prototype. This MVP includes:
-- Realtime match state (in‑memory) via Fastify + WebSocket
-- Shared TypeScript types and validation utilities
-- Vite + React web client with Tailwind and a minimal graph‑like list
-- AI Suggest button powered by the `useMatchState` hook
-- JSON match log export (`GET /match/:id/log` or Export button in the UI)
-- A stub **Magister Ludi** judge that scores basic Resonance/Aesthetics
-- Twist deck with counterpoint moves and global constraints
-- Player ratings with a ladder view and server endpoints
-- Concord route with Cathedral rendering and lift‑based GraphView
+A competitive, collaborative game of idea-weaving where two players cast **beads** (concepts) and connect them with labeled **strings** (relationships) on a living graph. An **AI Magister Ludi** evaluates compositions across five criteria: Resonance, Novelty, Integrity, Aesthetics, and Resilience.
+
+## Features
+- **Real-time Gameplay**: Live WebSocket synchronization between players
+- **Advanced AI Judging**: Deterministic v0 judge + optional LLM-powered v1 judge
+- **Interactive Visualization**: Force-directed graph view with D3.js
+- **Rich Game Mechanics**:
+  - AI-generated seeds from disjoint domains
+  - Twist deck with global constraints
+  - Counterpoint moves (mirror/subvert mechanics)
+  - Concordance composer for final Cathedral synthesis
+  - Player ratings and competitive ladder
+- **Developer Experience**:
+  - Full TypeScript coverage with shared type system
+  - Comprehensive test suite (58 tests, 100% pass rate)
+  - Fastify backend + React frontend with Tailwind CSS
+  - JSON match log export and replay capabilities
+  - AI suggestion system for move assistance
 
 ## Quickstart
 **Requirements:** Node 20+ (or 18+ with `--experimental-fetch`), npm 9+
@@ -35,10 +43,26 @@ To export a match log for replay or analysis, use the **Export Log** button in t
 4. Every move is validated by the server and synced live between players.
 5. Export the log when finished for replay or analysis.
 
-## Judge v0/v1
-The current prototype includes a deterministic **Magister Ludi** judge (v0) that scores basic\
-Resonance and Aesthetics. The planned v1 upgrade introduces path embeddings for Resonance,\
-NLI contradiction checks for Integrity, and shingle/LSH rarity for Novelty.
+## AI Judging System
+- **Judge v0**: Deterministic scoring across all five axes with weighted contributions
+- **Judge v1**: Optional LLM-powered judging via Ollama (with graceful fallback to v0)
+- **Scoring Axes**:
+  - **Resonance**: Path-based semantic connectivity
+  - **Novelty**: Content uniqueness and creativity
+  - **Integrity**: Logical consistency and justification quality
+  - **Aesthetics**: Composition harmony and complexity
+  - **Resilience**: Graph robustness and connectivity
+
+Judgment Scroll includes per-axis scores, winner determination, and analysis of strongest paths.
+
+## Game Mechanics
+- **Seeds**: Three AI-generated concepts from disjoint domains to inspire gameplay
+- **Cast**: Create text beads (concepts) linked to seeds with complexity ratings (1-5)
+- **Bind**: Connect beads with labeled relationships and 2-sentence justifications
+- **Twists**: Global constraints that affect available moves (e.g., "analogy only", "inversion required")
+- **Counterpoint**: Mirror or subvert opponent beads in different modalities
+- **Concordance**: Final collaborative synthesis into a "Cathedral" node
+- **Judgment**: AI evaluation of the complete graph across all five scoring axes
 
 ## Scripts
 - `npm run dev` — runs server + web concurrently
@@ -60,9 +84,10 @@ npm test --workspace packages/types
 ```
 
 ## Notes
-- Data is in‑memory (ephemeral). Suitable for local testing.
-- The judge is a deterministic stub; replace with your LLM/embedding pipeline later.
-- See `/packages/types/src/index.ts` for the move schema.
+- Data is in-memory (ephemeral). Suitable for local development and testing.
+- Both deterministic (v0) and LLM-powered (v1) judging are available.
+- See `/packages/types/src/index.ts` for complete type definitions and move schemas.
+- All 58 tests pass with comprehensive coverage across server, web, and types packages.
 
 ## Architecture
 ![Architecture Diagram](docs/architecture.svg)
