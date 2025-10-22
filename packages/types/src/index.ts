@@ -11,6 +11,7 @@ export interface Player {
 }
 
 export interface Seed { id: string; text: string; domain: string; }
+export interface Prelude { motifs: Seed[]; overture: string; }
 export interface Bead {
   id: string; ownerId: string; modality: Modality; title?: string;
   content: string; complexity: number; createdAt: number; seedId?: string;
@@ -46,7 +47,7 @@ export interface Cathedral { id: string; content: string; references: string[]; 
 export interface GameState {
   id: string; round: 1|2|3|4; phase: string; players: Player[];
   currentPlayerId?: string;
-  seeds: Seed[]; beads: Record<string,Bead>; edges: Record<string,Edge>; moves: Move[];
+  prelude: Prelude; beads: Record<string,Bead>; edges: Record<string,Edge>; moves: Move[];
   /** Active twist affecting move validation */
   twist?: ConstraintCard;
   /** Remaining twists to draw from */
@@ -240,7 +241,7 @@ export function validateMove(move: Move, state: GameState): ValidationResult {
       bead.title = sanitizeMarkdown(bead.title);
       if (bead.title.length > 80) return { ok: false, error: "Title too long" };
     }
-    if (bead.seedId && !state.seeds.find((s) => s.id === bead.seedId))
+    if (bead.seedId && !state.prelude?.motifs.find((s) => s.id === bead.seedId))
       return { ok: false, error: "Unknown seed" };
     // Mirror-specific: ensure target exists and modality differs
     if (move.type === "mirror") {

@@ -26,7 +26,7 @@ test("resonance score favors semantic similarity", () => {
     phase: "",
     players: [{ id: "p", handle: "h", resources: { insight: 0, restraint: 0, wildAvailable: false } }],
     currentPlayerId: "p",
-    seeds: [],
+    prelude: { motifs: [], overture: '' },
     beads: {
       a: { id: "a", ownerId: "p", modality: "text", content: a, complexity: 1, createdAt: 0 },
       b: { id: "b", ownerId: "p", modality: "text", content: b, complexity: 1, createdAt: 0 },

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 jest.mock('./api', () => ({
   __esModule: true,
   default: (path: string, opts?: RequestInit) => fetch(`http://localhost:8787${path}`, opts),
@@ -21,7 +21,10 @@ const mockState = {
   phase: 'play',
   players: [{ id: 'player1', handle: 'Alice', resources: { insight: 0, restraint: 0, wildAvailable: true } }],
   currentPlayerId: 'player1',
-  seeds: [{ id: 's1', text: 'Seed 1', domain: 'd1' }],
+  prelude: {
+    motifs: [{ id: 's1', text: 'Seed 1', domain: 'd1' }],
+    overture: 'The Magister invites contemplation.',
+  },
   beads: {
     b1: { id: 'b1', ownerId: 'player1', modality: 'text', title: 'Idea 1', content: 'One', complexity: 1, createdAt: 0, seedId: 's1' },
     b2: { id: 'b2', ownerId: 'player1', modality: 'text', title: 'Idea 2', content: 'Two', complexity: 1, createdAt: 0, seedId: 's1' },
@@ -31,6 +34,14 @@ const mockState = {
   createdAt: 0,
   updatedAt: 0,
 };
+
+async function completePrelude() {
+  const startButton = await screen.findByRole('button', { name: 'Contemplate first motif' });
+  fireEvent.click(startButton);
+  const enterButton = await screen.findByRole('button', { name: 'Enter the weave' });
+  fireEvent.click(enterButton);
+  await screen.findByText(/Prelude complete/i);
+}
 
 describe('App', () => {
   beforeEach(() => {
@@ -71,6 +82,14 @@ describe('App', () => {
     });
   });
 
+  const ensureSeedListed = async () => {
+    const seedsHeading = await screen.findByRole('heading', { name: /Seeds/i });
+    const container = seedsHeading.closest('div');
+    expect(container).not.toBeNull();
+    const seedItem = await within(container as HTMLElement).findByText(/Seed 1/);
+    expect(seedItem).toBeInTheDocument();
+  };
+
   it('renders seeds and submits moves', async () => {
     render(<App />);
 
@@ -81,6 +100,7 @@ describe('App', () => {
     fireEvent.click(screen.getByText('Create'));
 
     expect(await screen.findByText(/Seed 1/)).toBeInTheDocument();
+    await completePrelude();
 
     fireEvent.click(screen.getByText('Join'));
     await waitFor(() => {
@@ -113,6 +133,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByText('Create'));
     await screen.findByText(/Seed 1/);
+    await completePrelude();
 
     fireEvent.click(screen.getByText('Join'));
     await waitFor(() => {
@@ -161,6 +182,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByText('Create'));
     await screen.findByText(/Seed 1/);
+    await completePrelude();
 
     fireEvent.click(screen.getByText('Join'));
     await waitFor(() => {
@@ -210,7 +232,7 @@ describe('App', () => {
     });
 
     fireEvent.click(screen.getByText('Create'));
-    await screen.findByText(/Seed 1/);
+    await ensureSeedListed();
 
     fireEvent.click(screen.getByText('Join'));
     await waitFor(() => {
@@ -244,7 +266,7 @@ describe('App', () => {
     });
 
     fireEvent.click(screen.getByText('Create'));
-    await screen.findByText(/Seed 1/);
+    await ensureSeedListed();
 
     fireEvent.click(screen.getByText('Join'));
     await waitFor(() => {

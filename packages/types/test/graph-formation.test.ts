@@ -25,7 +25,7 @@ function baseState(): GameState {
         resources: { insight: 5, restraint: 5, wildAvailable: true },
       },
     ],
-    seeds: [{ id: 's1', text: 'seed', domain: 'd' }],
+    prelude: { motifs: [{ id: 's1', text: 'seed', domain: 'd' }], overture: 'Prelude' },
     beads: {},
     edges: {},
     moves: [],

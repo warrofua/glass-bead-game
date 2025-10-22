@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   MOVE_COSTS,
   sanitizeMarkdown,
-  type GameState,
   type Bead,
+  type Edge,
   type Move,
   type JudgmentScroll,
   type Modality,
@@ -21,9 +21,19 @@ export default function App() {
   const [selectedPath, setSelectedPath] = useState<number>(0);
   const [beadText, setBeadText] = useState("");
   const [beadModality, setBeadModality] = useState<Modality>("text");
+  const [tab, setTab] = useState<'weave' | 'ladder'>('weave');
+  const [preludeStage, setPreludeStage] = useState(0);
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
+  const motifs = state?.prelude?.motifs ?? [];
+  const totalPreludeSteps = state?.prelude ? motifs.length + 1 : 0;
+  const preludeComplete = totalPreludeSteps === 0 || preludeStage >= totalPreludeSteps;
+  const activeMotifIndex = !state?.prelude
+    ? -1
+    : preludeStage > 0 && preludeStage <= motifs.length
+    ? preludeStage - 1
+    : -1;
 
   const displayPlayer = (id: string) => {
     const player = state?.players.find((p) => p.id === id);
@@ -110,6 +120,30 @@ export default function App() {
 
   useEffect(() => { localStorage.setItem("matchId", matchId); }, [matchId]);
   useEffect(() => { localStorage.setItem("handle", handle); }, [handle]);
+  useEffect(() => {
+    if (!state?.prelude) {
+      setPreludeStage(0);
+      return;
+    }
+    setPreludeStage(0);
+  }, [state?.id, state?.prelude?.overture]);
+
+  const advancePrelude = () => {
+    if (!state?.prelude) return;
+    setPreludeStage((prev) => Math.min(prev + 1, totalPreludeSteps));
+  };
+
+  const preludeStepLabel = state?.prelude
+    ? `Step ${Math.min(preludeStage + 1, totalPreludeSteps)} of ${totalPreludeSteps}`
+    : '';
+
+  const nextPreludeLabel = (() => {
+    if (!state?.prelude) return '';
+    if (preludeStage === 0) return 'Contemplate first motif';
+    if (preludeStage < motifs.length) return 'Next motif';
+    if (preludeStage === motifs.length) return 'Enter the weave';
+    return '';
+  })();
 
   const createMatch = async () => {
     try {
@@ -155,7 +189,7 @@ export default function App() {
       content: text,
       complexity: 1,
       createdAt: Date.now(),
-      seedId: state.seeds[0]?.id
+      seedId: state.prelude?.motifs[0]?.id
     };
     const move: Move = {
       id: `m_${Math.random().toString(36).slice(2,8)}`,
@@ -178,6 +212,93 @@ export default function App() {
   };
 
   const [selected, setSelected] = useState<string[]>([]);
+
+  const playersById = useMemo(() => {
+    if (!state) return new Map<string, string>();
+    const map = new Map<string, string>();
+    for (const player of state.players) {
+      map.set(player.id, player.handle || player.id);
+    }
+    return map;
+  }, [state]);
+
+  const beadsInOrder = useMemo(() => {
+    if (!state) return [] as Bead[];
+    return Object.values(state.beads).sort((a, b) => a.createdAt - b.createdAt);
+  }, [state]);
+
+  const stringsInWeave = useMemo(() => {
+    if (!state) return [] as Edge[];
+    return Object.values(state.edges);
+  }, [state]);
+
+  const weaveChronicle = useMemo(() => {
+    if (!state) return [] as Array<{ move: Move; summary: string; detail?: string }>;
+    return state.moves
+      .slice()
+      .sort((a, b) => a.timestamp - b.timestamp)
+      .map((move) => {
+        const actor = playersById.get(move.playerId) ?? move.playerId;
+        if (move.type === "cast" || move.type === "mirror") {
+          const bead = move.payload?.bead as Bead | undefined;
+          const beadLabel = bead?.title || bead?.id || "New bead";
+          const verb = move.type === "cast" ? "casts" : "mirrors";
+          return {
+            move,
+            summary: `${actor} ${verb} ${beadLabel}`,
+            detail: bead?.content,
+          };
+        }
+        if (move.type === "bind" || move.type === "counterpoint" || move.type === "canonize" || move.type === "refute") {
+          const relation = move.payload?.label || move.type;
+          const from = move.payload?.from || move.payload?.targetId || "";
+          const to = move.payload?.to || "";
+          return {
+            move,
+            summary: `${actor} ${relation} ${from}${to ? ` → ${to}` : ""}`,
+            detail: move.payload?.justification,
+          };
+        }
+        if (move.type === "lift" || move.type === "prune" || move.type === "joker") {
+          const target = move.payload?.targetId || "the weave";
+          return {
+            move,
+            summary: `${actor} ${move.type} ${target}`,
+            detail: move.notes,
+          };
+        }
+        return {
+          move,
+          summary: `${actor} plays ${move.type}`,
+          detail: move.notes,
+        };
+      });
+  }, [playersById, state]);
+
+  const preludeNarrative = useMemo(() => {
+    if (!state)
+      return "Gather your ensemble. Create or join a match to draw the first strands of thought.";
+    const seeds = state.seeds;
+    const players = state.players;
+    const seedsLine =
+      seeds.length > 0
+        ? `Seeds on the lectern: ${seeds
+            .map((s) => `"${s.text}"${s.domain ? ` (${s.domain})` : ""}`)
+            .join(", ")}.`
+        : "No seeds have been revealed yet.";
+    const playersLine =
+      players.length > 0
+        ? `Voices in the circle: ${players
+            .map((p) => p.handle || p.id)
+            .join(", ")}.`
+        : "Awaiting players to take their seats.";
+    const twistLine = state.twist
+      ? `${state.twist.name} stirs the air: ${state.twist.description}`
+      : "The twist deck remains face-down for now.";
+    return [seedsLine, playersLine, twistLine].filter(Boolean).join(" ");
+  }, [state]);
+
+  const activeStrongPath = scroll?.strongPaths?.[selectedPath];
 
   const toggleSelect = (id: string) => {
     setSelected(sel => {
@@ -256,7 +377,7 @@ export default function App() {
       content: text,
       complexity: 1,
       createdAt: Date.now(),
-      seedId: state.seeds[0]?.id,
+      seedId: state.prelude?.motifs[0]?.id,
     };
     const move: Move = {
       id: `m_${Math.random().toString(36).slice(2,8)}`,
@@ -456,40 +577,137 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen p-4 grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
-      <aside className="bg-[var(--panel)] rounded-2xl p-4 space-y-3 shadow">
-        <h1 className="text-xl font-semibold">Glass Bead Game — MVP</h1>
-        <div className="space-y-2">
-          <label className="block text-sm text-[var(--muted)]">Match ID</label>
-          <input value={matchId} onChange={e=>setMatchId(e.target.value)} className="w-full bg-zinc-900 rounded px-3 py-2" placeholder="(create or paste)"/>
-          <label className="block text-sm text-[var(--muted)]">Handle</label>
-          <input value={handle} onChange={e=>setHandle(e.target.value)} className="w-full bg-zinc-900 rounded px-3 py-2" placeholder="e.g., MagisterRex"/>
-          <div className="flex gap-2 pt-2">
-            <button onClick={createMatch} className="px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Create</button>
-            <button onClick={joinMatch} className="px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Join</button>
-          </div>
-        </div>
-        {state && (
-          <div className="pt-4">
-            <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Turn</h2>
-            <p className="text-sm mt-1">
-              {currentPlayer?.handle || currentPlayer?.id || ""} {isMyTurn && "(your turn)"}
+    <div className="min-h-screen bg-[var(--bg)] text-white p-4 md:p-6 transition-colors duration-700 ease-out">
+      <div className="mx-auto max-w-7xl grid grid-cols-1 gap-4 lg:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] xl:grid-cols-[minmax(260px,320px)_minmax(0,1fr)_minmax(260px,360px)]">
+        <section className="bg-[var(--panel)] rounded-3xl p-5 shadow-xl space-y-6 transition-all duration-700 ease-out">
+          <header className="space-y-2">
+            <h1 className="text-xl font-semibold">Glass Bead Game — Revival</h1>
+            <p className="text-sm leading-relaxed text-[var(--muted)] transition-opacity duration-700 ease-out">
+              {preludeNarrative}
             </p>
-            {currentPlayer && (
-              <p className="text-xs mt-1">
-                Insight: {currentPlayer.resources.insight}, Restraint: {currentPlayer.resources.restraint}, Wild: {currentPlayer.resources.wildAvailable ? 1 : 0}
+          </header>
+
+          <div className="space-y-3">
+            <label className="block text-sm text-[var(--muted)]">Match ID</label>
+            <input
+              value={matchId}
+              onChange={(e) => setMatchId(e.target.value)}
+              className="w-full bg-zinc-900/70 rounded-xl px-3 py-2 transition-colors duration-500 ease-out focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="(create or paste)"
+            />
+            <label className="block text-sm text-[var(--muted)]">Handle</label>
+            <input
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              className="w-full bg-zinc-900/70 rounded-xl px-3 py-2 transition-colors duration-500 ease-out focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="e.g., MagisterRex"
+            />
+            <div className="flex flex-wrap gap-2 pt-2">
+              <button
+                onClick={createMatch}
+                className="px-3 py-2 bg-zinc-800 rounded-xl hover:bg-zinc-700 transition-colors duration-500 ease-out"
+              >
+                Create
+              </button>
+              <button
+                onClick={joinMatch}
+                className="px-3 py-2 bg-zinc-800 rounded-xl hover:bg-zinc-700 transition-colors duration-500 ease-out"
+              >
+                Join
+              </button>
+            </div>
+          </div>
+
+          {state && (
+            <div className="space-y-2 border-t border-white/5 pt-4">
+              <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Turn & Resources</h2>
+              <p className="text-sm transition-opacity duration-500 ease-out">
+                {currentPlayer?.handle || currentPlayer?.id || ""} {isMyTurn && "(your turn)"}
               </p>
+              {currentPlayer && (
+                <p className="text-xs text-[var(--muted)]">
+                  Insight: {currentPlayer.resources.insight}, Restraint: {currentPlayer.resources.restraint}, Wild: {currentPlayer.resources.wildAvailable ? 1 : 0}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-2 border-t border-white/5 pt-4">
+            <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Seeds</h2>
+            {state?.seeds?.length ? (
+              <ul className="text-sm space-y-1">
+                {state.seeds.map((s) => (
+                  <li key={s.id} className="opacity-80 transition-opacity duration-500 ease-out">
+                    • {s.text} <span className="opacity-60">({s.domain})</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-[var(--muted)]">Awaiting seeds.</p>
             )}
           </div>
         )}
-        <div className="pt-4">
-          <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Seeds</h2>
-          <ul className="text-sm mt-2 space-y-1">
-            {state?.seeds?.map(s => (
-              <li key={s.id} className="opacity-80">• {s.text} <span className="opacity-60">({s.domain})</span></li>
-            ))}
-          </ul>
-        </div>
+        {state?.prelude && (
+          <div className="pt-4 space-y-3">
+            <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Prelude</h2>
+            <p className="text-sm leading-relaxed whitespace-pre-line opacity-80">{state.prelude.overture}</p>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">
+                <span>Guided contemplation</span>
+                {totalPreludeSteps > 0 && (
+                  <span>{preludeComplete ? 'Complete' : preludeStepLabel}</span>
+                )}
+              </div>
+              {!preludeComplete ? (
+                <>
+                  {preludeStage === 0 ? (
+                    <p className="text-xs text-[var(--muted)]">
+                      Follow the Magister's overture, then step through each motif to unlock weaving actions.
+                    </p>
+                  ) : (
+                    <div>
+                      <p className="text-sm font-semibold">{motifs[activeMotifIndex]?.text}</p>
+                      <p className="text-xs uppercase tracking-wide text-[var(--muted)]">
+                        {motifs[activeMotifIndex]?.domain}
+                      </p>
+                    </div>
+                  )}
+                  <button
+                    onClick={advancePrelude}
+                    className="w-full px-3 py-2 bg-indigo-600/70 rounded-lg hover:bg-indigo-500/80 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {nextPreludeLabel}
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-emerald-400">Prelude complete. Cast and bind are now open.</p>
+              )}
+            </div>
+            <ul className="text-sm mt-2 space-y-1">
+              {motifs.map((s, idx) => {
+                const motifState = idx < preludeStage - 1 ? 'done' : idx === activeMotifIndex ? 'active' : 'pending';
+                const baseClass =
+                  motifState === 'active'
+                    ? 'bg-indigo-500/10 border border-indigo-500/40 text-white'
+                    : motifState === 'done'
+                    ? 'opacity-60'
+                    : 'opacity-80';
+                return (
+                  <li
+                    key={s.id}
+                    className={`flex items-start gap-2 rounded-lg px-2 py-1 ${baseClass}`}
+                  >
+                    <span className="mt-1 text-xs opacity-60">•</span>
+                    <span>
+                      <span className="font-medium">{s.text}</span>{' '}
+                      <span className="opacity-60">({s.domain})</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
         {state && (
           <div className="pt-4">
             <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Twist</h2>
@@ -498,13 +716,135 @@ export default function App() {
             ) : (
               <button onClick={drawTwist} disabled={!isMyTurn} className="px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed">Draw Twist</button>
             )}
+            <textarea
+              value={beadText}
+              onChange={(e) => setBeadText(e.target.value)}
+              className="w-full bg-zinc-900/70 rounded-2xl px-3 py-2 h-24 transition-colors duration-500 ease-out focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Share an idea..."
+            />
+            <label htmlFor="modality" className="block text-sm text-[var(--muted)]">Modality</label>
+            <select
+              id="modality"
+              value={beadModality}
+              onChange={(e) => setBeadModality(e.target.value as Modality)}
+              className="w-full bg-zinc-900/70 rounded-xl px-3 py-2 transition-colors duration-500 ease-out focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="text">text</option>
+              <option value="image">image</option>
+              <option value="audio">audio</option>
+              <option value="math">math</option>
+              <option value="code">code</option>
+              <option value="data">data</option>
+            </select>
+            <button
+              onClick={suggestBead}
+              disabled={!isMyTurn}
+              className="w-full px-3 py-2 bg-zinc-800 rounded-xl hover:bg-zinc-700 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Suggest with AI
+            </button>
+            <button
+              onClick={castBead}
+              disabled={
+                !beadText.trim() ||
+                beadModality !== "text" ||
+                !isMyTurn ||
+                !twistAllows("cast") ||
+                !canAfford("cast")
+              }
+              className="w-full px-3 py-2 bg-indigo-600 rounded-xl hover:bg-indigo-500 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {`Cast Bead${moveCostLabel("cast")}`}
+            </button>
+            <button
+              onClick={bindSelected}
+              disabled={!isMyTurn || selected.length !== 2 || !twistAllows("bind") || !canAfford("bind")}
+              className="w-full px-3 py-2 bg-indigo-600 rounded-xl hover:bg-indigo-500 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {`Bind Selected${moveCostLabel("bind")}`}
+            </button>
+            <button
+              onClick={counterpointSelected}
+              disabled={!isMyTurn || selected.length !== 2 || !twistAllows("counterpoint") || !canAfford("counterpoint")}
+              className="w-full px-3 py-2 bg-indigo-600 rounded-xl hover:bg-indigo-500 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {`Counterpoint Selected${moveCostLabel("counterpoint")}`}
+            </button>
+            <button
+              onClick={mirrorSelected}
+              disabled={!isMyTurn || selected.length !== 1 || !beadText.trim() || !twistAllows("mirror") || !canAfford("mirror")}
+              className="w-full px-3 py-2 bg-indigo-600 rounded-xl hover:bg-indigo-500 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {`Mirror Selected${moveCostLabel("mirror")}`}
+            </button>
+            <button
+              onClick={liftMove}
+              disabled={!isMyTurn || selected.length !== 1 || !twistAllows("lift") || !canAfford("lift")}
+              className="w-full px-3 py-2 bg-indigo-600 rounded-xl hover:bg-indigo-500 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {`Lift${moveCostLabel("lift")}`}
+            </button>
+            <button
+              onClick={canonizeMove}
+              disabled={!isMyTurn || selected.length !== 1 || !twistAllows("canonize") || !canAfford("canonize")}
+              className="w-full px-3 py-2 bg-indigo-600 rounded-xl hover:bg-indigo-500 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {`Canonize${moveCostLabel("canonize")}`}
+            </button>
+            <button
+              onClick={refuteMove}
+              disabled={!isMyTurn || selected.length !== 1 || !twistAllows("refute") || !canAfford("refute")}
+              className="w-full px-3 py-2 bg-indigo-600 rounded-xl hover:bg-indigo-500 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {`Refute${moveCostLabel("refute")}`}
+            </button>
+            <button
+              onClick={pruneMove}
+              disabled={!isMyTurn || selected.length !== 1 || !twistAllows("prune") || !canAfford("prune")}
+              className="w-full px-3 py-2 bg-indigo-600 rounded-xl hover:bg-indigo-500 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {`Prune${moveCostLabel("prune")}`}
+            </button>
+            <button
+              onClick={jokerMove}
+              disabled={!isMyTurn || !twistAllows("joker") || !canAfford("joker")}
+              className="w-full px-3 py-2 bg-indigo-600 rounded-xl hover:bg-indigo-500 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {`Joker${moveCostLabel("joker")}`}
+            </button>
+            <button
+              onClick={requestJudgment}
+              disabled={!isMyTurn}
+              className="w-full px-3 py-2 bg-emerald-600 rounded-xl hover:bg-emerald-500 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Request Judgment
+            </button>
+            <button
+              onClick={requestConcord}
+              disabled={!isMyTurn}
+              className="w-full px-3 py-2 bg-amber-600 rounded-xl hover:bg-amber-500 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Concord
+            </button>
+            <button
+              onClick={exportLog}
+              className="w-full px-3 py-2 bg-zinc-800 rounded-xl hover:bg-zinc-700 transition-colors duration-500 ease-out"
+            >
+              Export Log
+            </button>
           </div>
-        )}
-        <div className="pt-4 space-y-2">
-          <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Cast Bead</h2>
-          {currentPlayer && (
-            <p className="text-xs text-[var(--muted)]">
-              Insight: {currentPlayer.resources.insight}, Restraint: {currentPlayer.resources.restraint}, Wild: {currentPlayer.resources.wildAvailable ? 1 : 0}
+
+          <p className="text-xs text-[var(--muted)] pt-2">
+            Moves: cast, bind, counterpoint, mirror, lift, canonize, refute, prune, joker. Features: twists, AI suggestions,
+            judgment, concord.
+          </p>
+        </section>
+
+        <section className="bg-[var(--panel)] rounded-3xl p-5 shadow-xl space-y-6 transition-all duration-700 ease-out">
+          <header className="space-y-1">
+            <h2 className="text-lg font-medium">Weave Log</h2>
+            <p className="text-sm text-[var(--muted)]">
+              Threads arrive in order. Select beads to form relations and choose strong paths to tint the graph.
             </p>
           )}
           <textarea
@@ -541,7 +881,8 @@ export default function App() {
               beadModality !== "text" ||
               !isMyTurn ||
               !twistAllows("cast") ||
-              !canAfford("cast")
+              !canAfford("cast") ||
+              !preludeComplete
             }
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -549,7 +890,7 @@ export default function App() {
           </button>
           <button
             onClick={bindSelected}
-            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("bind") || !canAfford("bind")}
+            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("bind") || !canAfford("bind") || !preludeComplete}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {`Bind Selected${moveCostLabel("bind")}`}
@@ -615,50 +956,63 @@ export default function App() {
       </aside>
 
       <main className="bg-[var(--panel)] rounded-2xl p-4 shadow">
-        <h2 className="text-lg font-medium mb-3">Weave</h2>
-        {!state && <p className="opacity-60">Create or join a match to begin.</p>}
-        {state && (
-          <div className="grid gap-4 lg:grid-cols-2">
-            <section>
-              <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Beads</h3>
-              <ul className="mt-2 space-y-2">
-                {Object.values(state.beads).map((b) => (
-                  <li
-                    key={b.id}
-                    data-testid={`bead-${b.id}`}
-                    onClick={() => toggleSelect(b.id)}
-                    aria-selected={selected.includes(b.id)}
-                    className={`p-3 rounded bg-zinc-900 cursor-pointer ${
-                      selected.includes(b.id) ? "ring-2 ring-indigo-500" : ""
-                    }`}
-                  >
-                    <div className="text-sm font-semibold">{b.title || b.id}</div>
-                    <div className="text-xs opacity-70">{b.modality} · by {b.ownerId}</div>
-                    <div
-                      className="text-xs mt-1 opacity-80"
-                      dangerouslySetInnerHTML={{ __html: parseMarkdown(b.content) }}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </section>
-            <section>
-              <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Strings</h3>
-              <ul className="mt-2 space-y-2">
-                {Object.values(state.edges).map((e) => (
-                  <li key={e.id} className="p-3 rounded bg-zinc-900 text-xs">
-                    <div className="opacity-80">
-                      <b>{e.label}</b>: {e.from} → {e.to}
-                    </div>
-                    <div className="opacity-60 mt-1">{e.justification}</div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-            <section className="lg:col-span-2">
-              <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Graph</h3>
-              <div className="mt-2">
-                <GraphView matchId={matchId} state={state ?? undefined} strongPaths={scroll?.strongPaths} selectedPathIndex={selectedPath} width={600} height={400} />
+        <nav className="mb-3 flex gap-4">
+          <button
+            onClick={() => setTab('weave')}
+            className={tab === 'weave' ? 'font-semibold underline' : 'opacity-60'}
+          >
+            Weave
+          </button>
+          <button
+            onClick={() => setTab('ladder')}
+            className={tab === 'ladder' ? 'font-semibold underline' : 'opacity-60'}
+          >
+            Ladder
+          </button>
+        </nav>
+        {tab === 'weave' && (
+          <>
+            <h2 className="text-lg font-medium mb-3">Weave</h2>
+            {!state && <p className="opacity-60">Create or join a match to begin.</p>}
+            {state && (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <section>
+                  <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Beads</h3>
+                  <ul className="mt-3 space-y-2">
+                    {beadsInOrder.map((b) => (
+                      <li
+                        key={b.id}
+                        data-testid={`bead-${b.id}`}
+                        onClick={() => toggleSelect(b.id)}
+                        aria-selected={selected.includes(b.id)}
+                        className={`p-3 rounded-2xl bg-zinc-900/60 border border-white/5 cursor-pointer transition-all duration-500 ease-out hover:border-indigo-400/60 ${
+                          selected.includes(b.id) ? "ring-2 ring-indigo-500" : ""
+                        }`}
+                      >
+                        <div className="text-sm font-semibold">{b.title || b.id}</div>
+                        <div className="text-xs opacity-70">{b.modality} · by {b.ownerId}</div>
+                        <div
+                          className="text-xs mt-1 opacity-80"
+                          dangerouslySetInnerHTML={{ __html: parseMarkdown(b.content) }}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+
+                <section>
+                  <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Strings</h3>
+                  <ul className="mt-3 space-y-2">
+                    {stringsInWeave.map((e) => (
+                      <li key={e.id} className="p-3 rounded-2xl bg-zinc-900/60 text-xs border border-white/5 transition-colors duration-500 ease-out">
+                        <div className="opacity-80">
+                          <b>{e.label}</b>: {e.from} → {e.to}
+                        </div>
+                        <div className="opacity-60 mt-1">{e.justification}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               </div>
             )}
             {scroll && (
@@ -741,7 +1095,7 @@ export default function App() {
             Competitive standings now live in our reflective archive chronicles. Review post-match summaries to revisit highlights and lessons without a public ranking board.
           </p>
         </section>
-      </main>
+      </div>
     </div>
   );
 }
