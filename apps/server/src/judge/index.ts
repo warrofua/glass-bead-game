@@ -26,7 +26,7 @@ const WEIGHTS = {
   resilience: 0.10,
 } as const;
 
-const MAGISTER = "Magister Ludi";
+export const MAGISTER = "Magister Ludi";
 
 const AXIS_META: Record<JudgmentAxis, { label: string; emphasis: string; prompt: string }> = {
   resonance: {
@@ -62,6 +62,14 @@ const playerName = (state: GameState, playerId: string) => {
   const found = state.players.find((p) => p.id === playerId);
   return found?.handle || playerId;
 };
+
+export const composeClosingReflection = (
+  state: GameState,
+  winner: string | undefined,
+) =>
+  winner
+    ? `${MAGISTER} recognizes ${playerName(state, winner)} as steward of the weave for now.`
+    : `${MAGISTER} withholds a laurel; the weave remains open-ended.`;
 
 const beadLabel = (state: GameState, beadId: string) => {
   const bead = state.beads[beadId];
@@ -178,9 +186,7 @@ export function judge(state: GameState): JudgmentScroll {
   const closing: ClosingTurn = {
     kind: "closing",
     title: "Closing Contemplation",
-    reflection: winner
-      ? `${MAGISTER} recognizes ${playerName(state, winner)} as steward of the weave for now.`
-      : `${MAGISTER} withholds a laurel; the weave remains open-ended.`,
+    reflection: composeClosingReflection(state, winner),
     prompt: quietHighlights.length
       ? `Which connections could awaken ${quietHighlights.join(", ")}${weakSpots.length > quietHighlights.length ? ", …" : ""}?`
       : "Where will the next resonance take root?",

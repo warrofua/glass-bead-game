@@ -1,6 +1,6 @@
 import { GameState, JudgmentScroll } from '@gbg/types';
 import { Ollama } from 'ollama';
-import judge from './index.js';
+import judge, { composeClosingReflection } from './index.js';
 
 interface LLMClient {
   generate(model: string, prompt: string): AsyncIterable<string>;
@@ -37,8 +37,22 @@ export async function judgeWithLLM(
       output += part;
     }
     const parsed = JSON.parse(output);
-    if (typeof parsed.winner === 'string' && baseline.scores[parsed.winner]) {
-      baseline.winner = parsed.winner.trim();
+    if (typeof parsed.winner === 'string') {
+      const chosenWinner = parsed.winner.trim();
+      if (chosenWinner && baseline.scores[chosenWinner]) {
+        baseline.winner = chosenWinner;
+        if (baseline.summary) {
+          baseline.summary = { ...baseline.summary, leadingPlayer: chosenWinner };
+        }
+        const closingIndex = baseline.dialogue.turns.length - 1;
+        const closingTurn = baseline.dialogue.turns[closingIndex];
+        if (closingTurn?.kind === 'closing') {
+          baseline.dialogue.turns[closingIndex] = {
+            ...closingTurn,
+            reflection: composeClosingReflection(state, chosenWinner),
+          };
+        }
+      }
     }
   } catch (err) {
     console.warn('LLM judge failed', err);
