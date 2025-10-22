@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 jest.mock('./api', () => ({
   __esModule: true,
   default: (path: string, opts?: RequestInit) => fetch(`http://localhost:8787${path}`, opts),
@@ -53,12 +53,20 @@ describe('Twist UI', () => {
     });
   });
 
+  const ensureSeedListed = async () => {
+    const seedsHeading = await screen.findByRole('heading', { name: /Seeds/i });
+    const container = seedsHeading.closest('div');
+    expect(container).not.toBeNull();
+    const seedItem = await within(container as HTMLElement).findByText(/Seed 1/);
+    expect(seedItem).toBeInTheDocument();
+  };
+
   it('disables bind when twist requires motif-echo', async () => {
     render(<App />);
 
     fireEvent.change(screen.getByPlaceholderText('e.g., MagisterRex'), { target: { value: 'Alice' } });
     fireEvent.click(screen.getByText('Create'));
-    await screen.findByText(/Seed 1/);
+    await ensureSeedListed();
     fireEvent.click(screen.getByText('Join'));
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 jest.mock('./api', () => ({
   __esModule: true,
   default: (path: string, opts?: RequestInit) => fetch(`http://localhost:8787${path}`, opts),
@@ -71,6 +71,14 @@ describe('App', () => {
     });
   });
 
+  const ensureSeedListed = async () => {
+    const seedsHeading = await screen.findByRole('heading', { name: /Seeds/i });
+    const container = seedsHeading.closest('div');
+    expect(container).not.toBeNull();
+    const seedItem = await within(container as HTMLElement).findByText(/Seed 1/);
+    expect(seedItem).toBeInTheDocument();
+  };
+
   it('renders seeds and submits moves', async () => {
     render(<App />);
 
@@ -80,7 +88,7 @@ describe('App', () => {
 
     fireEvent.click(screen.getByText('Create'));
 
-    expect(await screen.findByText(/Seed 1/)).toBeInTheDocument();
+    await ensureSeedListed();
 
     fireEvent.click(screen.getByText('Join'));
     await waitFor(() => {
@@ -112,7 +120,7 @@ describe('App', () => {
     });
 
     fireEvent.click(screen.getByText('Create'));
-    await screen.findByText(/Seed 1/);
+    await ensureSeedListed();
 
     fireEvent.click(screen.getByText('Join'));
     await waitFor(() => {
@@ -160,7 +168,7 @@ describe('App', () => {
     });
 
     fireEvent.click(screen.getByText('Create'));
-    await screen.findByText(/Seed 1/);
+    await ensureSeedListed();
 
     fireEvent.click(screen.getByText('Join'));
     await waitFor(() => {
@@ -210,7 +218,7 @@ describe('App', () => {
     });
 
     fireEvent.click(screen.getByText('Create'));
-    await screen.findByText(/Seed 1/);
+    await ensureSeedListed();
 
     fireEvent.click(screen.getByText('Join'));
     await waitFor(() => {
@@ -244,7 +252,7 @@ describe('App', () => {
     });
 
     fireEvent.click(screen.getByText('Create'));
-    await screen.findByText(/Seed 1/);
+    await ensureSeedListed();
 
     fireEvent.click(screen.getByText('Join'));
     await waitFor(() => {
