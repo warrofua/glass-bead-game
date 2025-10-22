@@ -10,7 +10,7 @@ const state: GameState = {
   phase: 'play',
   players: [],
   currentPlayerId: undefined,
-  seeds: [],
+  prelude: { motifs: [], overture: '' },
   beads: {
     a: { id: 'a', ownerId: 'p1', modality: 'text', title: 'A', content: '', complexity: 1, createdAt: 0 },
     b: { id: 'b', ownerId: 'p1', modality: 'text', title: 'B', content: '', complexity: 1, createdAt: 0 },

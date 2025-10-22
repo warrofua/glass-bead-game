@@ -11,7 +11,7 @@ test('resonance higher for similar content', () => {
   const makeState = (a: string, b: string): GameState => ({
     id: 'm', round: 1, phase: '',
     players: [{ id: 'p', handle: 'h', resources: { insight: 0, restraint: 0, wildAvailable: false } }],
-    currentPlayerId: 'p', seeds: [], moves: [], createdAt: 0, updatedAt: 0,
+    currentPlayerId: 'p', prelude: { motifs: [], overture: '' }, moves: [], createdAt: 0, updatedAt: 0,
     beads: {
       a: { id: 'a', ownerId: 'p', modality: 'text', content: a, complexity: 1, createdAt: 0 },
       b: { id: 'b', ownerId: 'p', modality: 'text', content: b, complexity: 1, createdAt: 0 }
@@ -27,7 +27,7 @@ test('novelty rewards rare shingles', () => {
   const unique: GameState = {
     id: 'm', round: 1, phase: '',
     players: [{ id: 'p', handle: 'h', resources: { insight: 0, restraint: 0, wildAvailable: false } }],
-    currentPlayerId: 'p', seeds: [], moves: [], createdAt: 0, updatedAt: 0,
+    currentPlayerId: 'p', prelude: { motifs: [], overture: '' }, moves: [], createdAt: 0, updatedAt: 0,
     beads: { a: { id: 'a', ownerId: 'p', modality: 'text', content: 'alpha beta gamma', complexity: 1, createdAt: 0 } },
     edges: {}
   };
@@ -45,7 +45,7 @@ test('integrity penalizes negations', () => {
   const base: GameState = {
     id: 'm', round: 1, phase: '',
     players: [{ id: 'p', handle: 'h', resources: { insight: 0, restraint: 0, wildAvailable: false } }],
-    currentPlayerId: 'p', seeds: [], moves: [], createdAt: 0, updatedAt: 0,
+    currentPlayerId: 'p', prelude: { motifs: [], overture: '' }, moves: [], createdAt: 0, updatedAt: 0,
     beads: {
       a: { id: 'a', ownerId: 'p', modality: 'text', content: 'x', complexity: 1, createdAt: 0 },
       b: { id: 'b', ownerId: 'p', modality: 'text', content: 'y', complexity: 1, createdAt: 0 }

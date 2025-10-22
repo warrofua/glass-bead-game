@@ -8,7 +8,7 @@ test('replayMoves applies cast and bind moves', () => {
     round: 1,
     phase: 'play',
     players: [],
-    seeds: [],
+    prelude: { motifs: [], overture: '' },
     beads: {},
     edges: {},
     moves: [],

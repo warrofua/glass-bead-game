@@ -52,9 +52,18 @@ export default function App() {
   const [beadText, setBeadText] = useState("");
   const [beadModality, setBeadModality] = useState<Modality>("text");
   const [tab, setTab] = useState<'weave' | 'ladder'>('weave');
+  const [preludeStage, setPreludeStage] = useState(0);
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
+  const motifs = state?.prelude?.motifs ?? [];
+  const totalPreludeSteps = state?.prelude ? motifs.length + 1 : 0;
+  const preludeComplete = totalPreludeSteps === 0 || preludeStage >= totalPreludeSteps;
+  const activeMotifIndex = !state?.prelude
+    ? -1
+    : preludeStage > 0 && preludeStage <= motifs.length
+    ? preludeStage - 1
+    : -1;
 
   const remainingResources = (type: Move["type"]) => {
     if (!currentPlayer) return null;
@@ -125,6 +134,30 @@ export default function App() {
 
   useEffect(() => { localStorage.setItem("matchId", matchId); }, [matchId]);
   useEffect(() => { localStorage.setItem("handle", handle); }, [handle]);
+  useEffect(() => {
+    if (!state?.prelude) {
+      setPreludeStage(0);
+      return;
+    }
+    setPreludeStage(0);
+  }, [state?.id, state?.prelude?.overture]);
+
+  const advancePrelude = () => {
+    if (!state?.prelude) return;
+    setPreludeStage((prev) => Math.min(prev + 1, totalPreludeSteps));
+  };
+
+  const preludeStepLabel = state?.prelude
+    ? `Step ${Math.min(preludeStage + 1, totalPreludeSteps)} of ${totalPreludeSteps}`
+    : '';
+
+  const nextPreludeLabel = (() => {
+    if (!state?.prelude) return '';
+    if (preludeStage === 0) return 'Contemplate first motif';
+    if (preludeStage < motifs.length) return 'Next motif';
+    if (preludeStage === motifs.length) return 'Enter the weave';
+    return '';
+  })();
 
   const createMatch = async () => {
     try {
@@ -170,7 +203,7 @@ export default function App() {
       content: text,
       complexity: 1,
       createdAt: Date.now(),
-      seedId: state.seeds[0]?.id
+      seedId: state.prelude?.motifs[0]?.id
     };
     const move: Move = {
       id: `m_${Math.random().toString(36).slice(2,8)}`,
@@ -271,7 +304,7 @@ export default function App() {
       content: text,
       complexity: 1,
       createdAt: Date.now(),
-      seedId: state.seeds[0]?.id,
+      seedId: state.prelude?.motifs[0]?.id,
     };
     const move: Move = {
       id: `m_${Math.random().toString(36).slice(2,8)}`,
@@ -497,14 +530,67 @@ export default function App() {
             )}
           </div>
         )}
-        <div className="pt-4">
-          <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Seeds</h2>
-          <ul className="text-sm mt-2 space-y-1">
-            {state?.seeds?.map(s => (
-              <li key={s.id} className="opacity-80">• {s.text} <span className="opacity-60">({s.domain})</span></li>
-            ))}
-          </ul>
-        </div>
+        {state?.prelude && (
+          <div className="pt-4 space-y-3">
+            <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Prelude</h2>
+            <p className="text-sm leading-relaxed whitespace-pre-line opacity-80">{state.prelude.overture}</p>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">
+                <span>Guided contemplation</span>
+                {totalPreludeSteps > 0 && (
+                  <span>{preludeComplete ? 'Complete' : preludeStepLabel}</span>
+                )}
+              </div>
+              {!preludeComplete ? (
+                <>
+                  {preludeStage === 0 ? (
+                    <p className="text-xs text-[var(--muted)]">
+                      Follow the Magister's overture, then step through each motif to unlock weaving actions.
+                    </p>
+                  ) : (
+                    <div>
+                      <p className="text-sm font-semibold">{motifs[activeMotifIndex]?.text}</p>
+                      <p className="text-xs uppercase tracking-wide text-[var(--muted)]">
+                        {motifs[activeMotifIndex]?.domain}
+                      </p>
+                    </div>
+                  )}
+                  <button
+                    onClick={advancePrelude}
+                    className="w-full px-3 py-2 bg-indigo-600/70 rounded-lg hover:bg-indigo-500/80 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {nextPreludeLabel}
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-emerald-400">Prelude complete. Cast and bind are now open.</p>
+              )}
+            </div>
+            <ul className="text-sm mt-2 space-y-1">
+              {motifs.map((s, idx) => {
+                const motifState = idx < preludeStage - 1 ? 'done' : idx === activeMotifIndex ? 'active' : 'pending';
+                const baseClass =
+                  motifState === 'active'
+                    ? 'bg-indigo-500/10 border border-indigo-500/40 text-white'
+                    : motifState === 'done'
+                    ? 'opacity-60'
+                    : 'opacity-80';
+                return (
+                  <li
+                    key={s.id}
+                    className={`flex items-start gap-2 rounded-lg px-2 py-1 ${baseClass}`}
+                  >
+                    <span className="mt-1 text-xs opacity-60">•</span>
+                    <span>
+                      <span className="font-medium">{s.text}</span>{' '}
+                      <span className="opacity-60">({s.domain})</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
         {state && (
           <div className="pt-4">
             <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Twist</h2>
@@ -556,7 +642,8 @@ export default function App() {
               beadModality !== "text" ||
               !isMyTurn ||
               !twistAllows("cast") ||
-              !canAfford("cast")
+              !canAfford("cast") ||
+              !preludeComplete
             }
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -564,7 +651,7 @@ export default function App() {
           </button>
           <button
             onClick={bindSelected}
-            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("bind") || !canAfford("bind")}
+            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("bind") || !canAfford("bind") || !preludeComplete}
             className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {`Bind Selected${moveCostLabel("bind")}`}

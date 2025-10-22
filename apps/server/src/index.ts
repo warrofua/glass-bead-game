@@ -15,7 +15,7 @@ import registerMoveRoute from "./routes/move.js";
 import registerConcordRoute from "./routes/concord.js";
 import judge from "./judge/index.js";
 import judgeWithLLM from "./judge/llm.js";
-import generateSeeds from "./seeds.js";
+import generatePrelude from "./seeds.js";
 import { Ollama } from "ollama";
 import { readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -123,9 +123,9 @@ function logMetrics(matchId: string, move: Move, state: GameState){
 // --- REST Endpoints
 fastify.post("/match", async (req, reply) => {
   const id = randomUUID().slice(0,8);
-  const seeds = await generateSeeds();
+  const prelude = await generatePrelude();
   const state: GameState = {
-    id, round: 1, phase:"SeedDraw", players: [], currentPlayerId: undefined, seeds,
+    id, round: 1, phase:"SeedDraw", players: [], currentPlayerId: undefined, prelude,
     beads: {}, edges: {}, moves: [], twistDeck: sampleTwists(), createdAt: now(), updatedAt: now()
   };
   matches.set(id, state);
@@ -187,7 +187,7 @@ fastify.post<{ Params: { id: string } }>("/match/:id/ai", async (req, reply) => 
   const { playerId } = (req.body as any) ?? {};
   const state = matches.get(id);
   if (!state) return reply.code(404).send({ error: "No such match" });
-  const seed = state.seeds[0]?.text ?? "";
+  const seed = state.prelude?.motifs[0]?.text ?? "";
   const last = [...state.moves].reverse().find((m) => m.playerId !== playerId && m.type === "cast");
   const opponent = last?.payload?.bead?.content ?? "";
   let suggestion = "";

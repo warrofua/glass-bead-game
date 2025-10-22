@@ -9,7 +9,7 @@ const baseState: Omit<GameState, 'id'> = {
   phase: 'play',
   players: [],
   currentPlayerId: undefined,
-  seeds: [],
+  prelude: { motifs: [], overture: '' },
   beads: {},
   edges: {},
   moves: [],

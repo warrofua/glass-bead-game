@@ -68,7 +68,7 @@ test('cast move broadcasts new bead to all players', async (t) => {
     content: 'A small bead of meaning.',
     complexity: 1,
     createdAt: Date.now(),
-    seedId: match.seeds[0]?.id
+    seedId: match.prelude.motifs[0]?.id
   };
   const move = {
     id: `m_${Math.random().toString(36).slice(2, 8)}`,

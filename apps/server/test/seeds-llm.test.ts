@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateSeeds, sampleSeeds } from '../src/seeds.ts';
+import { generatePrelude, samplePrelude } from '../src/seeds.ts';
 
-test('generateSeeds returns sanitized LLM output', async (t) => {
+test('generatePrelude returns sanitized LLM output', async (t) => {
   const prev = process.env.LLM_MODEL;
   process.env.LLM_MODEL = 'test';
   t.after(() => {
@@ -11,21 +11,26 @@ test('generateSeeds returns sanitized LLM output', async (t) => {
   const client = {
     generate() {
       return (async function* () {
-        yield JSON.stringify([
-          { text: '<script>alert(1)</script>Physics', domain: '<script>alert(1)</script>science' },
-          { text: 'Jazz', domain: 'music' },
-          { text: 'Daoism', domain: 'philosophy' }
-        ]);
+        yield JSON.stringify({
+          motifs: [
+            { text: '<script>alert(1)</script>Physics', domain: '<script>alert(1)</script>science' },
+            { text: 'Jazz', domain: 'music' },
+            { text: 'Daoism', domain: 'philosophy' }
+          ],
+          overture: '<script>alert(1)</script>The Magister speaks.'
+        });
       })();
     }
   };
-  const seeds = await generateSeeds(client);
-  assert.equal(seeds.length, 3);
-  assert.equal(seeds[0].text, 'Physics');
-  assert.equal(seeds[0].domain, 'science');
+  const prelude = await generatePrelude(client);
+  assert.equal(prelude.motifs.length, 3);
+  assert.equal(prelude.motifs[0].text, 'Physics');
+  assert.equal(prelude.motifs[0].domain, 'science');
+  assert.ok(prelude.overture.length > 0);
+  assert.ok(!prelude.overture.includes('<script>'));
 });
 
-test('generateSeeds falls back to sample seeds on error', async (t) => {
+test('generatePrelude falls back to sample seeds on error', async (t) => {
   const prev = process.env.LLM_MODEL;
   process.env.LLM_MODEL = 'test';
   t.after(() => {
@@ -38,11 +43,11 @@ test('generateSeeds falls back to sample seeds on error', async (t) => {
       })();
     }
   };
-  const seeds = await generateSeeds(client);
-  assert.deepEqual(seeds, sampleSeeds());
+  const prelude = await generatePrelude(client);
+  assert.deepEqual(prelude, samplePrelude());
 });
 
-test('generateSeeds extracts JSON array from prose or code fences', async (t) => {
+test('generatePrelude extracts JSON object from prose or code fences', async (t) => {
   const prev = process.env.LLM_MODEL;
   process.env.LLM_MODEL = 'test';
   t.after(() => {
@@ -53,23 +58,27 @@ test('generateSeeds extracts JSON array from prose or code fences', async (t) =>
     generate() {
       return (async function* () {
         yield [
-          'Here are some seeds:',
+          'Here is your prelude:',
           '```json',
-          JSON.stringify([
-            { text: 'Astrophysics', domain: 'science' },
-            { text: 'Cubism', domain: 'art' }
-          ]),
+          JSON.stringify({
+            motifs: [
+              { text: 'Astrophysics', domain: 'science' },
+              { text: 'Cubism', domain: 'art' }
+            ],
+            overture: 'A crisp overture.'
+          }),
           '```',
           'Enjoy!'
         ].join('\n');
       })();
     }
   };
-  const seeds = await generateSeeds(client);
-  const sample = sampleSeeds();
-  assert.equal(seeds.length, 3);
-  assert.equal(seeds[0].text, 'Astrophysics');
-  assert.equal(seeds[1].domain, 'art');
-  assert.equal(seeds[2].text, sample[0].text);
-  assert.equal(seeds[2].domain, sample[0].domain);
+  const prelude = await generatePrelude(client);
+  const sample = samplePrelude();
+  assert.equal(prelude.motifs.length, 3);
+  assert.equal(prelude.motifs[0].text, 'Astrophysics');
+  assert.equal(prelude.motifs[1].domain, 'art');
+  assert.equal(prelude.motifs[2].text, sample.motifs[2].text);
+  assert.equal(prelude.motifs[2].domain, sample.motifs[2].domain);
+  assert.ok(prelude.overture.length > 0);
 });

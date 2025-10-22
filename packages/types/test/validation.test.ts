@@ -35,7 +35,7 @@ test('validateMove cast success and failure', () => {
     players: [
       { id: 'p1', handle: 'P1', resources: { insight: 1, restraint: 1, wildAvailable: false } },
     ],
-    seeds: [],
+    prelude: { motifs: [], overture: '' },
     beads: {},
     edges: {},
     moves: [],
@@ -108,7 +108,7 @@ test('validateMove bind success and failure', () => {
     players: [
       { id: 'p1', handle: 'P1', resources: { insight: 1, restraint: 1, wildAvailable: false } },
     ],
-    seeds: [],
+    prelude: { motifs: [], overture: '' },
     beads: { b1: bead1, b2: bead2 },
     edges: {},
     moves: [],
@@ -165,7 +165,7 @@ test('applyMove mutates state for cast and bind', () => {
     round: 1,
     phase: 'play',
     players: [],
-    seeds: [],
+    prelude: { motifs: [], overture: '' },
     beads: { b2: bead2 },
     edges: {},
     moves: [],
@@ -226,7 +226,7 @@ test('applyMoveWithResources deducts resources and uses wild', () => {
       { id: 'p1', handle: 'P1', resources: { insight: 2, restraint: 0, wildAvailable: true } },
       { id: 'p2', handle: 'P2', resources: { insight: 0, restraint: 1, wildAvailable: true } },
     ],
-    seeds: [],
+    prelude: { motifs: [], overture: '' },
     beads: {},
     edges: {},
     moves: [],
@@ -346,7 +346,7 @@ test('mirror move must change modality', () => {
   const state: GameState = {
     id: 'g1', round: 1, phase: 'play',
     players: [{ id: 'p1', handle: 'P1', resources: { insight: 1, restraint: 0, wildAvailable: false } }],
-    seeds: [], beads: { b1: bead1 }, edges: {}, moves: [], createdAt: 0, updatedAt: 0,
+    prelude: { motifs: [], overture: '' }, beads: { b1: bead1 }, edges: {}, moves: [], createdAt: 0, updatedAt: 0,
   };
 
   const sameMod: Move = {
@@ -370,7 +370,7 @@ test('counterpoint respects twist relation', () => {
   const state: GameState = {
     id: 'g1', round: 1, phase: 'play',
     players: [{ id: 'p1', handle: 'P1', resources: { insight: 1, restraint: 0, wildAvailable: false } }],
-    seeds: [], beads: { b1: bead1, b2: bead2 }, edges: {}, moves: [], createdAt: 0, updatedAt: 0,
+    prelude: { motifs: [], overture: '' }, beads: { b1: bead1, b2: bead2 }, edges: {}, moves: [], createdAt: 0, updatedAt: 0,
     twist: { id: 't1', name: 'R', description: 'require motif', effect: { requiredRelation: 'motif-echo' } },
   };
 
