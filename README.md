@@ -11,7 +11,7 @@ A competitive, collaborative game of idea-weaving where two players cast **beads
   - Twist deck with global constraints
   - Counterpoint moves (mirror/subvert mechanics)
   - Concordance composer for final Cathedral synthesis
-  - Player ratings and competitive ladder
+  - Reflective archive chronicles for post-match highlights (no public ranking board)
 - **Developer Experience**:
   - Full TypeScript coverage with shared type system
   - Comprehensive test suite (58 tests, 100% pass rate)

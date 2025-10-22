@@ -10,7 +10,6 @@ import {
 } from "@gbg/types";
 import { marked } from "marked";
 import GraphView from "./GraphView";
-import Ladder from "./Ladder";
 import useMatchState from "./hooks/useMatchState";
 import api from "./api";
 
@@ -51,7 +50,6 @@ export default function App() {
   const [selectedPath, setSelectedPath] = useState<number>(0);
   const [beadText, setBeadText] = useState("");
   const [beadModality, setBeadModality] = useState<Modality>("text");
-  const [tab, setTab] = useState<'weave' | 'ladder'>('weave');
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
@@ -630,115 +628,102 @@ export default function App() {
       </aside>
 
       <main className="bg-[var(--panel)] rounded-2xl p-4 shadow">
-        <nav className="mb-3 flex gap-4">
-          <button
-            onClick={() => setTab('weave')}
-            className={tab === 'weave' ? 'font-semibold underline' : 'opacity-60'}
-          >
-            Weave
-          </button>
-          <button
-            onClick={() => setTab('ladder')}
-            className={tab === 'ladder' ? 'font-semibold underline' : 'opacity-60'}
-          >
-            Ladder
-          </button>
-        </nav>
-        {tab === 'weave' && (
-          <>
-            <h2 className="text-lg font-medium mb-3">Weave</h2>
-            {!state && <p className="opacity-60">Create or join a match to begin.</p>}
-            {state && (
-              <div className="grid gap-4 lg:grid-cols-2">
-                <section>
-                  <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Beads</h3>
-                  <ul className="mt-2 space-y-2">
-                    {Object.values(state.beads).map((b) => (
-                      <li
-                        key={b.id}
-                        data-testid={`bead-${b.id}`}
-                        onClick={() => toggleSelect(b.id)}
-                        aria-selected={selected.includes(b.id)}
-                        className={`p-3 rounded bg-zinc-900 cursor-pointer ${
-                          selected.includes(b.id) ? "ring-2 ring-indigo-500" : ""
-                        }`}
-                      >
-                        <div className="text-sm font-semibold">{b.title || b.id}</div>
-                        <div className="text-xs opacity-70">{b.modality} · by {b.ownerId}</div>
-                        <div
-                          className="text-xs mt-1 opacity-80"
-                          dangerouslySetInnerHTML={{ __html: parseMarkdown(b.content) }}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-                <section>
-                  <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Strings</h3>
-                  <ul className="mt-2 space-y-2">
-                    {Object.values(state.edges).map((e) => (
-                      <li key={e.id} className="p-3 rounded bg-zinc-900 text-xs">
-                        <div className="opacity-80">
-                          <b>{e.label}</b>: {e.from} → {e.to}
-                        </div>
-                        <div className="opacity-60 mt-1">{e.justification}</div>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-                <section className="lg:col-span-2">
-                  <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Graph</h3>
-                  <div className="mt-2">
-                    <GraphView matchId={matchId} state={state ?? undefined} strongPaths={scroll?.strongPaths} selectedPathIndex={selectedPath} width={600} height={400} />
-                  </div>
-                </section>
+        <h2 className="text-lg font-medium mb-3">Weave</h2>
+        {!state && <p className="opacity-60">Create or join a match to begin.</p>}
+        {state && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <section>
+              <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Beads</h3>
+              <ul className="mt-2 space-y-2">
+                {Object.values(state.beads).map((b) => (
+                  <li
+                    key={b.id}
+                    data-testid={`bead-${b.id}`}
+                    onClick={() => toggleSelect(b.id)}
+                    aria-selected={selected.includes(b.id)}
+                    className={`p-3 rounded bg-zinc-900 cursor-pointer ${
+                      selected.includes(b.id) ? "ring-2 ring-indigo-500" : ""
+                    }`}
+                  >
+                    <div className="text-sm font-semibold">{b.title || b.id}</div>
+                    <div className="text-xs opacity-70">{b.modality} · by {b.ownerId}</div>
+                    <div
+                      className="text-xs mt-1 opacity-80"
+                      dangerouslySetInnerHTML={{ __html: parseMarkdown(b.content) }}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section>
+              <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Strings</h3>
+              <ul className="mt-2 space-y-2">
+                {Object.values(state.edges).map((e) => (
+                  <li key={e.id} className="p-3 rounded bg-zinc-900 text-xs">
+                    <div className="opacity-80">
+                      <b>{e.label}</b>: {e.from} → {e.to}
+                    </div>
+                    <div className="opacity-60 mt-1">{e.justification}</div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+            <section className="lg:col-span-2">
+              <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Graph</h3>
+              <div className="mt-2">
+                <GraphView matchId={matchId} state={state ?? undefined} strongPaths={scroll?.strongPaths} selectedPathIndex={selectedPath} width={600} height={400} />
               </div>
-            )}
-            {scroll && (
-              <section className="mt-6">
-                <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Judgment</h3>
-                  <div className="mt-2 text-sm">
-                    <div className="mb-2">Winner: {scroll.winner || "TBD"}</div>
-                    <ul className="space-y-2">
-                      {Object.entries(scroll.scores).map(([pid, s]) => (
-                        <li key={pid} className="text-xs">
-                          <div><b>{pid}</b>: {(s.total * 100).toFixed(1)}%</div>
-                          <ul className="ml-4 space-y-0.5">
-                            {Object.entries(AXIS_INFO).map(([axis, info]) => (
-                              <li key={axis}>
-                                {info.label}: {(s[axis as keyof typeof AXIS_INFO] * 100).toFixed(1)}% × {Math.round(info.weight * 100)}% = {(s.contributions[axis as keyof typeof AXIS_INFO] * 100).toFixed(1)}% – {info.desc}
-                              </li>
-                            ))}
-                          </ul>
+            </section>
+          </div>
+        )}
+        {scroll && (
+          <section className="mt-6">
+            <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Judgment</h3>
+              <div className="mt-2 text-sm">
+                <div className="mb-2">Winner: {scroll.winner || "TBD"}</div>
+                <ul className="space-y-2">
+                  {Object.entries(scroll.scores).map(([pid, s]) => (
+                    <li key={pid} className="text-xs">
+                      <div><b>{pid}</b>: {(s.total * 100).toFixed(1)}%</div>
+                      <ul className="ml-4 space-y-0.5">
+                        {Object.entries(AXIS_INFO).map(([axis, info]) => (
+                          <li key={axis}>
+                            {info.label}: {(s[axis as keyof typeof AXIS_INFO] * 100).toFixed(1)}% × {Math.round(info.weight * 100)}% = {(s.contributions[axis as keyof typeof AXIS_INFO] * 100).toFixed(1)}% – {info.desc}
+                          </li>
+                        ))}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+                {scroll.strongPaths.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-xs uppercase tracking-wide text-[var(--muted)]">Strong Paths</h4>
+                    <ul className="mt-1 space-y-1">
+                      {scroll.strongPaths.map((p, idx) => (
+                        <li key={idx}>
+                          <button onClick={() => setSelectedPath(idx)} className={`text-xs underline ${selectedPath === idx ? 'font-bold' : ''}`}>
+                            {p.nodes.join(' → ')} {p.why && `(${p.why})`}
+                          </button>
                         </li>
                       ))}
                     </ul>
-                    {scroll.strongPaths.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="text-xs uppercase tracking-wide text-[var(--muted)]">Strong Paths</h4>
-                        <ul className="mt-1 space-y-1">
-                          {scroll.strongPaths.map((p, idx) => (
-                            <li key={idx}>
-                              <button onClick={() => setSelectedPath(idx)} className={`text-xs underline ${selectedPath === idx ? 'font-bold' : ''}`}>
-                                {p.nodes.join(' → ')} {p.why && `(${p.why})`}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {scroll.weakSpots.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="text-xs uppercase tracking-wide text-[var(--muted)]">Weak Spots</h4>
-                        <div className="text-xs">{scroll.weakSpots.join(', ')}</div>
-                      </div>
-                    )}
                   </div>
-              </section>
-            )}
-          </>
+                )}
+                {scroll.weakSpots.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-xs uppercase tracking-wide text-[var(--muted)]">Weak Spots</h4>
+                    <div className="text-xs">{scroll.weakSpots.join(', ')}</div>
+                  </div>
+                )}
+              </div>
+          </section>
         )}
-        {tab === 'ladder' && <Ladder />}
+        <section className="mt-8 rounded-xl bg-zinc-900/60 p-4">
+          <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Reflective Archive</h3>
+          <p className="text-sm mt-2 opacity-80">
+            Competitive standings now live in our reflective archive chronicles. Review post-match summaries to revisit highlights and lessons without a public ranking board.
+          </p>
+        </section>
       </main>
     </div>
   );
