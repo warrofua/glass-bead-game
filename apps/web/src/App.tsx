@@ -13,35 +13,6 @@ import GraphView from "./GraphView";
 import useMatchState from "./hooks/useMatchState";
 import api from "./api";
 
-const AXIS_INFO = {
-  resonance: {
-    label: "Resonance",
-    desc: "Semantic cohesion between connected beads",
-    weight: 0.3,
-  },
-  novelty: {
-    label: "Novelty",
-    desc: "Rarity of n-grams vs baseline corpus",
-    weight: 0.2,
-  },
-  integrity: {
-    label: "Integrity",
-    desc: "Lack of contradictions between beads",
-    weight: 0.2,
-  },
-  aesthetics: {
-    label: "Aesthetics",
-    desc: "Beauty via bead contributions",
-    weight: 0.2,
-  },
-  resilience: {
-    label: "Resilience",
-    desc: "Structural robustness of the web",
-    weight: 0.1,
-  },
-} as const;
-
-
 export default function App() {
   const [matchId, setMatchId] = useState<string>(() => localStorage.getItem("matchId") || "");
   const [handle, setHandle] = useState<string>(() => localStorage.getItem("handle") || "");
@@ -63,6 +34,22 @@ export default function App() {
     : preludeStage > 0 && preludeStage <= motifs.length
     ? preludeStage - 1
     : -1;
+
+  const displayPlayer = (id: string) => {
+    const player = state?.players.find((p) => p.id === id);
+    return player?.handle || id;
+  };
+
+  const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
+
+  const safeSummary = scroll?.summary ?? {
+    leadingPlayer: scroll?.winner,
+    axisLeads: [],
+    strongPathCount: scroll?.strongPaths?.length ?? 0,
+    weakSpotCount: scroll?.weakSpots?.length ?? 0,
+  };
+  const dialogueTurns = scroll?.dialogue?.turns ?? [];
+  const magisterName = scroll?.dialogue?.magister ?? "Magister Ludi";
 
   const remainingResources = (type: Move["type"]) => {
     if (!currentPlayer) return null;
@@ -1027,111 +1014,86 @@ export default function App() {
                   </ul>
                 </section>
               </div>
-
-              <section>
-                <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Chronicle</h3>
-                {weaveChronicle.length ? (
-                  <ul className="mt-3 space-y-3">
-                    {weaveChronicle.map(({ move, summary, detail }) => (
-                      <li key={move.id} className="p-4 rounded-2xl bg-zinc-900/50 border border-white/5 transition-all duration-500 ease-out">
-                        <div className="text-sm font-medium">{summary}</div>
-                        <div className="mt-1 text-xs uppercase tracking-wide text-[var(--muted)]">{move.type}</div>
-                        {detail && (
-                          <div
-                            className="mt-2 text-xs leading-relaxed opacity-80"
-                            dangerouslySetInnerHTML={{ __html: parseMarkdown(detail) }}
-                          />
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-3 text-sm text-[var(--muted)]">No moves recorded yet.</p>
-                )}
-              </section>
-            </div>
-          )}
-        </section>
-
-        <section className="bg-[var(--panel)] rounded-3xl p-5 shadow-xl space-y-6 transition-all duration-700 ease-out">
-          <header className="space-y-1">
-            <h2 className="text-lg font-medium">Scroll</h2>
-            <p className="text-sm text-[var(--muted)]">
-              The Magister whispers through the graph. Watch the commentary evolve as the weave deepens.
-            </p>
-          </header>
-
-          {!state && <p className="text-sm text-[var(--muted)]">No match is active. Summon a board to receive the scroll.</p>}
-
-          {state && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Living Graph</h3>
-                <p className="text-xs text-[var(--muted)]">Highlight selections from the Weave panel to see resonant paths glow.</p>
-                <div className="mt-3 rounded-3xl bg-zinc-900/40 p-3 backdrop-blur-sm border border-white/5">
-                  <div className="overflow-x-auto">
-                    <GraphView
-                      matchId={matchId}
-                      state={state ?? undefined}
-                      strongPaths={scroll?.strongPaths}
-                      selectedPathIndex={selectedPath}
-                      width={640}
-                      height={420}
-                    />
+            )}
+            {scroll && (
+              <section className="mt-6">
+                <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Magister's Judgment</h3>
+                <div className="mt-2 text-sm space-y-4">
+                  <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800">
+                    <div className="text-xs uppercase tracking-wide text-[var(--muted)]">{magisterName}</div>
+                    <div className="mt-1 text-base font-medium">
+                      {scroll.winner ? `${displayPlayer(scroll.winner)} carries the laurel.` : "No laurel bestowed yet."}
+                    </div>
+                    <div className="mt-2 text-xs text-[var(--muted)]">
+                      Paths traced: {safeSummary.strongPathCount} · Quiet beads: {safeSummary.weakSpotCount}
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {dialogueTurns.map((turn, idx) => {
+                      if (turn.kind === "axis-insight") {
+                        return (
+                          <article key={idx} className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800/80">
+                            <header className="flex items-baseline justify-between gap-2">
+                              <span className="text-xs uppercase tracking-wide text-[var(--muted)]">{turn.title}</span>
+                              <span className="text-[var(--muted)] text-xs">axis: {turn.axis}</span>
+                            </header>
+                            <p className="mt-2 leading-relaxed">{turn.insight}</p>
+                            <ul className="mt-3 text-xs space-y-1">
+                              {turn.ranking.map((entry) => (
+                                <li key={entry.playerId} className="flex justify-between gap-2">
+                                  <span className="font-medium">{displayPlayer(entry.playerId)}</span>
+                                  <span className="opacity-70">
+                                    tone {formatPercent(entry.value)} · influence {formatPercent(entry.contribution)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            <p className="mt-3 text-xs italic text-[var(--muted)]">{turn.prompt}</p>
+                          </article>
+                        );
+                      }
+                      if (turn.kind === "path-story") {
+                        return (
+                          <article key={idx} className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-900/60">
+                            <header className="flex items-baseline justify-between gap-2">
+                              <span className="text-xs uppercase tracking-wide text-emerald-200">{turn.title}</span>
+                              <span className="text-xs text-emerald-200/80">weight {turn.weight.toFixed(2)}</span>
+                            </header>
+                            <p className="mt-2 leading-relaxed">{turn.story}</p>
+                            <div className="mt-2 text-xs text-emerald-200/90">{turn.nodes.join(" → ")}</div>
+                            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                              <button
+                                onClick={() => setSelectedPath(turn.pathIndex)}
+                                className={`px-3 py-1 rounded-full border ${selectedPath === turn.pathIndex ? 'border-emerald-300 text-emerald-200' : 'border-emerald-700 text-emerald-200/80'}`}
+                              >
+                                Trace path
+                              </button>
+                              <span className="italic text-emerald-200/70">{turn.prompt}</span>
+                            </div>
+                          </article>
+                        );
+                      }
+                      return (
+                        <article key={idx} className="p-4 rounded-xl bg-indigo-950/40 border border-indigo-900/60">
+                          <header className="flex items-baseline justify-between gap-2">
+                            <span className="text-xs uppercase tracking-wide text-indigo-200">{turn.title}</span>
+                          </header>
+                          <p className="mt-2 leading-relaxed">{turn.reflection}</p>
+                          <p className="mt-3 text-xs italic text-indigo-200/80">{turn.prompt}</p>
+                        </article>
+                      );
+                    })}
                   </div>
                 </div>
-                {activeStrongPath && (
-                  <div className="mt-3 rounded-2xl bg-indigo-600/10 border border-indigo-500/40 p-3 text-xs leading-relaxed">
-                    <div className="font-semibold text-indigo-200">Highlighted path</div>
-                    <p className="mt-1 text-indigo-100/80">
-                      {activeStrongPath.nodes.join(" → ")} {activeStrongPath.why ? `— ${activeStrongPath.why}` : ""}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-3 border-t border-white/5 pt-4">
-                <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Magister Commentary</h3>
-                {scroll ? (
-                  <div className="space-y-4 text-sm">
-                    <div className="rounded-2xl bg-zinc-900/60 border border-white/5 p-3">
-                      <div className="text-xs uppercase tracking-wide text-[var(--muted)]">Verdict</div>
-                      <div className="text-base font-semibold mt-1">Winner: {scroll.winner || "TBD"}</div>
-                    </div>
-                    <div className="space-y-3">
-                      {Object.entries(scroll.scores).map(([pid, score]) => (
-                        <div key={pid} className="rounded-2xl bg-zinc-900/60 border border-white/5 p-3 text-xs space-y-2">
-                          <div className="font-semibold text-sm">{pid}</div>
-                          <div>Total: {(score.total * 100).toFixed(1)}%</div>
-                          <ul className="space-y-1">
-                            {Object.entries(AXIS_INFO).map(([axis, info]) => (
-                              <li key={axis}>
-                                {info.label}: {(score[axis as keyof typeof AXIS_INFO] * 100).toFixed(1)}% × {Math.round(info.weight * 100)}% = {(score.contributions[axis as keyof typeof AXIS_INFO] * 100).toFixed(1)}% – {info.desc}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                    {scroll.weakSpots.length > 0 && (
-                      <div className="rounded-2xl bg-rose-900/40 border border-rose-500/30 p-3 text-xs">
-                        <div className="font-semibold text-sm">Weak Spots</div>
-                        <p className="mt-1">{scroll.weakSpots.join(", ")}</p>
-                      </div>
-                    )}
-                    {scroll.missedFuse && (
-                      <div className="rounded-2xl bg-amber-900/40 border border-amber-500/30 p-3 text-xs">
-                        <div className="font-semibold text-sm">Missed Fuse</div>
-                        <p className="mt-1">{scroll.missedFuse}</p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm text-[var(--muted)]">The Magister has not yet offered a scroll. Call for judgment when ready.</p>
-                )}
-              </div>
-            </div>
-          )}
+              </section>
+            )}
+          </>
+        )}
+        <section className="mt-8 rounded-xl bg-zinc-900/60 p-4">
+          <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Reflective Archive</h3>
+          <p className="text-sm mt-2 opacity-80">
+            Competitive standings now live in our reflective archive chronicles. Review post-match summaries to revisit highlights and lessons without a public ranking board.
+          </p>
         </section>
       </div>
     </div>
