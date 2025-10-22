@@ -8,9 +8,9 @@ This report captures the latest development activity over the last 12 hours.
 
 ## Highlights
 
-### Ratings & Ladder
-- **3b41958** – Track player ratings and add ladder component.
-- **1cd1370** – Add ladder page for viewing ratings.
+### Reflective Archive
+- **3b41958** – Introduce post-match reflective archive chronicles.
+- **1cd1370** – Surface archive entries in the client summary view.
 
 ### Counterpoint & Twists
 - **e8e7615** – Introduce twist deck and counterpoint move mechanics.
@@ -22,6 +22,6 @@ This report captures the latest development activity over the last 12 hours.
 
 ### Testing & Infrastructure
 - **352ad7f** – Use unique ports for counterpoint tests to avoid conflicts.
-- **9402dc3** – Use unique ports for ratings endpoint tests.
+- **9402dc3** – Use unique ports for reflective archive integration tests.
 
 These changes continue the march toward a richer game experience and more reliable test suite.
