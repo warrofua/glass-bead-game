@@ -7,7 +7,7 @@ const sampleState: GameState = {
   round: 1,
   phase: "play",
   players: [],
-  seeds: [],
+  prelude: { motifs: [], overture: '' },
   beads: {
     a: { id: "a", ownerId: "p1", modality: "text", content: "A", complexity: 1, createdAt: 0 },
     b: { id: "b", ownerId: "p1", modality: "text", content: "B", complexity: 1, createdAt: 0 },

@@ -50,9 +50,19 @@ export default function App() {
   const [selectedPath, setSelectedPath] = useState<number>(0);
   const [beadText, setBeadText] = useState("");
   const [beadModality, setBeadModality] = useState<Modality>("text");
+  const [tab, setTab] = useState<'weave' | 'ladder'>('weave');
+  const [preludeStage, setPreludeStage] = useState(0);
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
+  const motifs = state?.prelude?.motifs ?? [];
+  const totalPreludeSteps = state?.prelude ? motifs.length + 1 : 0;
+  const preludeComplete = totalPreludeSteps === 0 || preludeStage >= totalPreludeSteps;
+  const activeMotifIndex = !state?.prelude
+    ? -1
+    : preludeStage > 0 && preludeStage <= motifs.length
+    ? preludeStage - 1
+    : -1;
 
   const remainingResources = (type: Move["type"]) => {
     if (!currentPlayer) return null;
@@ -123,6 +133,30 @@ export default function App() {
 
   useEffect(() => { localStorage.setItem("matchId", matchId); }, [matchId]);
   useEffect(() => { localStorage.setItem("handle", handle); }, [handle]);
+  useEffect(() => {
+    if (!state?.prelude) {
+      setPreludeStage(0);
+      return;
+    }
+    setPreludeStage(0);
+  }, [state?.id, state?.prelude?.overture]);
+
+  const advancePrelude = () => {
+    if (!state?.prelude) return;
+    setPreludeStage((prev) => Math.min(prev + 1, totalPreludeSteps));
+  };
+
+  const preludeStepLabel = state?.prelude
+    ? `Step ${Math.min(preludeStage + 1, totalPreludeSteps)} of ${totalPreludeSteps}`
+    : '';
+
+  const nextPreludeLabel = (() => {
+    if (!state?.prelude) return '';
+    if (preludeStage === 0) return 'Contemplate first motif';
+    if (preludeStage < motifs.length) return 'Next motif';
+    if (preludeStage === motifs.length) return 'Enter the weave';
+    return '';
+  })();
 
   const createMatch = async () => {
     try {
@@ -168,7 +202,7 @@ export default function App() {
       content: text,
       complexity: 1,
       createdAt: Date.now(),
-      seedId: state.seeds[0]?.id
+      seedId: state.prelude?.motifs[0]?.id
     };
     const move: Move = {
       id: `m_${Math.random().toString(36).slice(2,8)}`,
@@ -356,7 +390,7 @@ export default function App() {
       content: text,
       complexity: 1,
       createdAt: Date.now(),
-      seedId: state.seeds[0]?.id,
+      seedId: state.prelude?.motifs[0]?.id,
     };
     const move: Move = {
       id: `m_${Math.random().toString(36).slice(2,8)}`,
@@ -625,32 +659,75 @@ export default function App() {
               <p className="text-sm text-[var(--muted)]">Awaiting seeds.</p>
             )}
           </div>
-
-          {state && (
-            <div className="space-y-2 border-t border-white/5 pt-4">
-              <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Twist</h2>
-              {state.twist ? (
-                <p className="text-sm transition-opacity duration-500 ease-out">
-                  {state.twist.name}: {state.twist.description}
-                </p>
+        )}
+        {state?.prelude && (
+          <div className="pt-4 space-y-3">
+            <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Prelude</h2>
+            <p className="text-sm leading-relaxed whitespace-pre-line opacity-80">{state.prelude.overture}</p>
+            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 space-y-2">
+              <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">
+                <span>Guided contemplation</span>
+                {totalPreludeSteps > 0 && (
+                  <span>{preludeComplete ? 'Complete' : preludeStepLabel}</span>
+                )}
+              </div>
+              {!preludeComplete ? (
+                <>
+                  {preludeStage === 0 ? (
+                    <p className="text-xs text-[var(--muted)]">
+                      Follow the Magister's overture, then step through each motif to unlock weaving actions.
+                    </p>
+                  ) : (
+                    <div>
+                      <p className="text-sm font-semibold">{motifs[activeMotifIndex]?.text}</p>
+                      <p className="text-xs uppercase tracking-wide text-[var(--muted)]">
+                        {motifs[activeMotifIndex]?.domain}
+                      </p>
+                    </div>
+                  )}
+                  <button
+                    onClick={advancePrelude}
+                    className="w-full px-3 py-2 bg-indigo-600/70 rounded-lg hover:bg-indigo-500/80 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {nextPreludeLabel}
+                  </button>
+                </>
               ) : (
-                <button
-                  onClick={drawTwist}
-                  disabled={!isMyTurn}
-                  className="px-3 py-2 bg-zinc-800 rounded-xl hover:bg-zinc-700 transition-colors duration-500 ease-out disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Draw Twist
-                </button>
+                <p className="text-sm text-emerald-400">Prelude complete. Cast and bind are now open.</p>
               )}
             </div>
-          )}
-
-          <div className="space-y-3 border-t border-white/5 pt-4">
-            <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Cast Bead</h2>
-            {currentPlayer && (
-              <p className="text-xs text-[var(--muted)]">
-                Insight: {currentPlayer.resources.insight}, Restraint: {currentPlayer.resources.restraint}, Wild: {currentPlayer.resources.wildAvailable ? 1 : 0}
-              </p>
+            <ul className="text-sm mt-2 space-y-1">
+              {motifs.map((s, idx) => {
+                const motifState = idx < preludeStage - 1 ? 'done' : idx === activeMotifIndex ? 'active' : 'pending';
+                const baseClass =
+                  motifState === 'active'
+                    ? 'bg-indigo-500/10 border border-indigo-500/40 text-white'
+                    : motifState === 'done'
+                    ? 'opacity-60'
+                    : 'opacity-80';
+                return (
+                  <li
+                    key={s.id}
+                    className={`flex items-start gap-2 rounded-lg px-2 py-1 ${baseClass}`}
+                  >
+                    <span className="mt-1 text-xs opacity-60">•</span>
+                    <span>
+                      <span className="font-medium">{s.text}</span>{' '}
+                      <span className="opacity-60">({s.domain})</span>
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+        {state && (
+          <div className="pt-4">
+            <h2 className="text-sm uppercase tracking-wide text-[var(--muted)]">Twist</h2>
+            {state.twist ? (
+              <p className="text-sm mt-1">{state.twist.name}: {state.twist.description}</p>
+            ) : (
+              <button onClick={drawTwist} disabled={!isMyTurn} className="px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed">Draw Twist</button>
             )}
             <textarea
               value={beadText}
@@ -782,39 +859,135 @@ export default function App() {
             <p className="text-sm text-[var(--muted)]">
               Threads arrive in order. Select beads to form relations and choose strong paths to tint the graph.
             </p>
-          </header>
+          )}
+          <textarea
+            value={beadText}
+            onChange={e => setBeadText(e.target.value)}
+            className="w-full bg-zinc-900 rounded px-3 py-2 h-24"
+            placeholder="Share an idea..."
+          />
+          <label htmlFor="modality" className="block text-sm text-[var(--muted)] mt-2">Modality</label>
+          <select
+            id="modality"
+            value={beadModality}
+            onChange={e => setBeadModality(e.target.value as Modality)}
+            className="w-full bg-zinc-900 rounded px-3 py-2"
+          >
+            <option value="text">text</option>
+            <option value="image">image</option>
+            <option value="audio">audio</option>
+            <option value="math">math</option>
+            <option value="code">code</option>
+            <option value="data">data</option>
+          </select>
+          <button
+            onClick={suggestBead}
+            disabled={!isMyTurn}
+            className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Suggest with AI
+          </button>
+          <button
+            onClick={castBead}
+            disabled={
+              !beadText.trim() ||
+              beadModality !== "text" ||
+              !isMyTurn ||
+              !twistAllows("cast") ||
+              !canAfford("cast") ||
+              !preludeComplete
+            }
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {`Cast Bead${moveCostLabel("cast")}`}
+          </button>
+          <button
+            onClick={bindSelected}
+            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("bind") || !canAfford("bind") || !preludeComplete}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {`Bind Selected${moveCostLabel("bind")}`}
+          </button>
+          <button
+            onClick={counterpointSelected}
+            disabled={!isMyTurn || selected.length !== 2 || !twistAllows("counterpoint") || !canAfford("counterpoint")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {`Counterpoint Selected${moveCostLabel("counterpoint")}`}
+          </button>
+          <button
+            onClick={mirrorSelected}
+            disabled={!isMyTurn || selected.length !== 1 || !beadText.trim() || !twistAllows("mirror") || !canAfford("mirror")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {`Mirror Selected${moveCostLabel("mirror")}`}
+          </button>
+          <button
+            onClick={liftMove}
+            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("lift") || !canAfford("lift")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {`Lift${moveCostLabel("lift")}`}
+          </button>
+          <button
+            onClick={canonizeMove}
+            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("canonize") || !canAfford("canonize")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {`Canonize${moveCostLabel("canonize")}`}
+          </button>
+          <button
+            onClick={refuteMove}
+            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("refute") || !canAfford("refute")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {`Refute${moveCostLabel("refute")}`}
+          </button>
 
-          {!state && <p className="text-sm text-[var(--muted)]">Create or join a match to begin weaving.</p>}
+          <button
+            onClick={pruneMove}
+            disabled={!isMyTurn || selected.length !== 1 || !twistAllows("prune") || !canAfford("prune")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {`Prune${moveCostLabel("prune")}`}
+          </button>
+          <button
+            onClick={jokerMove}
+            disabled={!isMyTurn || !twistAllows("joker") || !canAfford("joker")}
+            className="w-full px-3 py-2 bg-indigo-600 rounded hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {`Joker${moveCostLabel("joker")}`}
+          </button>
+          <button onClick={requestJudgment} disabled={!isMyTurn} className="w-full px-3 py-2 bg-emerald-600 rounded hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed">Request Judgment</button>
+          <button onClick={requestConcord} disabled={!isMyTurn} className="w-full px-3 py-2 bg-amber-600 rounded hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed">Concord</button>
+          <button onClick={exportLog} className="w-full px-3 py-2 bg-zinc-800 rounded hover:bg-zinc-700">Export Log</button>
+        </div>
+        <p className="text-xs text-[var(--muted)] pt-4">
+          Moves: cast, bind, counterpoint, mirror, lift, canonize, refute, prune, joker. Features: twists, AI suggestions,
+          judgment, concord.
+        </p>
+      </aside>
 
-          {state && (
-            <div className="space-y-6">
-              {scroll?.strongPaths?.length ? (
-                <div className="space-y-2">
-                  <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Strong Paths</h3>
-                  <p className="text-xs text-[var(--muted)]">
-                    Choose a path to bathe the graph in its cadence. The Scroll panel mirrors your selection live.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {scroll.strongPaths.map((path, idx) => (
-                      <button
-                        key={`${path.nodes.join("-")}-${idx}`}
-                        onClick={() => setSelectedPath(idx)}
-                        className={`px-3 py-2 rounded-2xl text-xs transition-all duration-500 ease-out border border-white/10 hover:border-indigo-400/60 ${
-                          selectedPath === idx ? "bg-indigo-600/80" : "bg-zinc-900/60"
-                        }`}
-                      >
-                        {path.nodes.join(" → ")} {path.why ? `— ${path.why}` : ""}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Strong Paths</h3>
-                  <p className="text-xs text-[var(--muted)]">No highlighted paths yet. Request a judgment to reveal them.</p>
-                </div>
-              )}
-
+      <main className="bg-[var(--panel)] rounded-2xl p-4 shadow">
+        <nav className="mb-3 flex gap-4">
+          <button
+            onClick={() => setTab('weave')}
+            className={tab === 'weave' ? 'font-semibold underline' : 'opacity-60'}
+          >
+            Weave
+          </button>
+          <button
+            onClick={() => setTab('ladder')}
+            className={tab === 'ladder' ? 'font-semibold underline' : 'opacity-60'}
+          >
+            Ladder
+          </button>
+        </nav>
+        {tab === 'weave' && (
+          <>
+            <h2 className="text-lg font-medium mb-3">Weave</h2>
+            {!state && <p className="opacity-60">Create or join a match to begin.</p>}
+            {state && (
               <div className="grid gap-4 lg:grid-cols-2">
                 <section>
                   <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Beads</h3>

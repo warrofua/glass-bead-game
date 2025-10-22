@@ -36,7 +36,7 @@ test('turn switches to next player after move', async (t) => {
     content: 'simple',
     complexity: 1,
     createdAt: Date.now(),
-    seedId: match.seeds[0]?.id
+    seedId: match.prelude.motifs[0]?.id
   };
   const move = {
     id: `m_${Math.random().toString(36).slice(2, 8)}`,
@@ -87,7 +87,7 @@ test('rejects move when not your turn', async (t) => {
     content: 'simple',
     complexity: 1,
     createdAt: Date.now(),
-    seedId: match.seeds[0]?.id
+    seedId: match.prelude.motifs[0]?.id
   };
   const move = {
     id: `m_${Math.random().toString(36).slice(2, 8)}`,

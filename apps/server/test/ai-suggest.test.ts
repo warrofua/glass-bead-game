@@ -13,7 +13,7 @@ test('AI suggestion endpoint returns sanitized text', async () => {
     phase: 'play',
     players: [],
     currentPlayerId: undefined,
-    seeds: [{ id: 's1', text: 'Seed', domain: 'd1' }],
+    prelude: { motifs: [{ id: 's1', text: 'Seed', domain: 'd1' }], overture: 'Intro' },
     beads: {},
     edges: {},
     moves: [],
@@ -34,7 +34,7 @@ test('AI suggestion endpoint returns sanitized text', async () => {
     const { playerId } = (req.body as any) ?? {};
     const state = matches.get(id);
     if (!state) return reply.code(404).send({ error: 'No such match' });
-    const seed = state.seeds[0]?.text ?? '';
+    const seed = state.prelude?.motifs[0]?.text ?? '';
     const last = [...state.moves].reverse().find((m) => m.playerId !== playerId && m.type === 'cast');
     const opponent = last?.payload?.bead?.content ?? '';
     let suggestion = '';

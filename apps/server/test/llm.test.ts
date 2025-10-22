@@ -11,7 +11,7 @@ const state: GameState = {
     { id: 'p1', handle: 'A', resources: { insight: 0, restraint: 0, wildAvailable: false } },
     { id: 'p2', handle: 'B', resources: { insight: 0, restraint: 0, wildAvailable: false } }
   ],
-  seeds: [],
+  prelude: { motifs: [], overture: '' },
   beads: {
     b1: { id: 'b1', ownerId: 'p1', modality: 'text', content: 'b1', complexity: 1, createdAt: 0 },
     b2: { id: 'b2', ownerId: 'p1', modality: 'text', content: 'b2', complexity: 1, createdAt: 0 },
