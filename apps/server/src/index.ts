@@ -17,9 +17,6 @@ import judge from "./judge/index.js";
 import judgeWithLLM from "./judge/llm.js";
 import generatePrelude from "./seeds.js";
 import { Ollama } from "ollama";
-import { readFile, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -28,37 +25,6 @@ await fastify.register(cors, { origin: true });
 const matches = new Map<string, GameState>();
 const sockets = new Map<string, Set<WebSocket>>();
 const metrics = { wsSendFailures: 0, totalMoves: 0, latency: 0 };
-const ratings = new Map<string, { wins: number; losses: number }>();
-let pendingRatingWrite: Promise<void> = Promise.resolve();
-
-const RATINGS_FILE = process.env.RATINGS_FILE
-  ? path.resolve(process.env.RATINGS_FILE)
-  : fileURLToPath(new URL("../ratings.json", import.meta.url));
-
-async function loadRatings() {
-  try {
-    const data = await readFile(RATINGS_FILE, "utf-8");
-    const arr = JSON.parse(data) as { handle: string; wins: number; losses: number }[];
-    for (const { handle, wins, losses } of arr) {
-      ratings.set(handle, { wins, losses });
-    }
-  } catch (err: any) {
-    if (err.code !== "ENOENT") {
-      console.warn("Failed to load ratings", err);
-    }
-  }
-}
-
-async function flushRatings() {
-  const arr = Array.from(ratings.entries()).map(([handle, rec]) => ({ handle, ...rec }));
-  pendingRatingWrite = pendingRatingWrite
-    .catch(() => {})
-    .then(() => writeFile(RATINGS_FILE, JSON.stringify(arr, null, 2)));
-  return pendingRatingWrite;
-}
-
-await loadRatings();
-
 // --- Utility
 function now(){ return Date.now(); }
 
@@ -211,35 +177,10 @@ fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) 
   const useLlm = !!process.env.LLM_MODEL;
   const scroll = useLlm ? await judgeWithLLM(state) : judge(state);
   broadcast(id, "end:judgment", scroll);
-  const winnerId = scroll.winner;
-  if (winnerId) {
-    for (const p of state.players) {
-      const rec = ratings.get(p.handle) || { wins: 0, losses: 0 };
-      if (p.id === winnerId) rec.wins++; else rec.losses++;
-      ratings.set(p.handle, rec);
-    }
-    await flushRatings().catch(err => console.warn("Failed to save ratings", err));
-  }
   return reply.send(scroll);
 });
 
 fastify.get("/metrics", async () => metrics);
-
-fastify.get("/ratings", async () => {
-  return Array.from(ratings.entries()).map(([handle, rec]) => ({ handle, ...rec }));
-});
-
-fastify.post<{ Body: { handle: string; result: "win" | "loss" } }>("/ratings", async (req, reply) => {
-  const { handle, result } = req.body;
-  if (!handle || (result !== "win" && result !== "loss")) {
-    return reply.code(400).send({ error: "Invalid rating update" });
-  }
-  const rec = ratings.get(handle) || { wins: 0, losses: 0 };
-  if (result === "win") rec.wins++; else rec.losses++;
-  ratings.set(handle, rec);
-  await flushRatings().catch(err => console.warn("Failed to save ratings", err));
-  return reply.send({ handle, ...rec });
-});
 
 // --- WebSocket (per match)
 const server = fastify.server;

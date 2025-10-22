@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 jest.mock('./api', () => ({
   __esModule: true,
   default: (path: string, opts?: RequestInit) => fetch(`http://localhost:8787${path}`, opts),
@@ -63,6 +63,14 @@ describe('Twist UI', () => {
       return Promise.reject(new Error('Unknown endpoint'));
     });
   });
+
+  const ensureSeedListed = async () => {
+    const seedsHeading = await screen.findByRole('heading', { name: /Seeds/i });
+    const container = seedsHeading.closest('div');
+    expect(container).not.toBeNull();
+    const seedItem = await within(container as HTMLElement).findByText(/Seed 1/);
+    expect(seedItem).toBeInTheDocument();
+  };
 
   it('disables bind when twist requires motif-echo', async () => {
     render(<App />);

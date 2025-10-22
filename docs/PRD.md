@@ -32,7 +32,7 @@ A competitive, collaborative game of idea‑weaving. Two players place **beads**
 
 **Secondary Objectives (Beta):**
 
-* Add **Twists/Constraints**, **Counterpoint**, **Prune/Restraint**, **Concordance (Cathedral)**, and a basic ladder.
+* Add **Twists/Constraints**, **Counterpoint**, **Prune/Restraint**, **Concordance (Cathedral)**, and a reflective archive for post-match chronicles.
 * Introduce path‑embedding **Resonance**, **NLI‑based Integrity**, and **novelty** scoring.
 * Shareable gallery replays with exportable Judgment Scroll PDF.
 
@@ -55,7 +55,7 @@ A competitive, collaborative game of idea‑weaving. Two players place **beads**
 * Basic list‑based weave view (beads & strings lists), not yet force‑graph.
 * In‑memory persistence; export JSON Match Log.
 
-**Out (MVP):** account system, full moderation pipeline, ladder, gallery, force‑graph canvas, non‑text modalities, constraints deck, Concordance composer, production DB.
+**Out (MVP):** account system, full moderation pipeline, reflective archive publishing, gallery, force‑graph canvas, non‑text modalities, constraints deck, Concordance composer, production DB.
 
 ---
 
@@ -234,7 +234,7 @@ Constraints: bead content ≤ 10k chars (MVP); justification ≥ 2 sentences for
 * **Sprint 1 (MVP Core):** Cast, Bind, Judge, Seeds, in‑memory matches, JSON export.
 * **Sprint 2:** Constraints/Twists engine, validator rules, Concordance composer, basic graph canvas.
 * **Sprint 3:** Judge v1 (embeddings + NLI + novelty), replays, exportable Scroll PDF.
-* **Sprint 4:** Gallery, ladder, Duet/Boss mode, Blindfold variant.
+* **Sprint 4:** Gallery, reflective archive, Duet/Boss mode, Blindfold variant.
 
 ---
 
