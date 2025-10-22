@@ -14,35 +14,6 @@ import Ladder from "./Ladder";
 import useMatchState from "./hooks/useMatchState";
 import api from "./api";
 
-const AXIS_INFO = {
-  resonance: {
-    label: "Resonance",
-    desc: "Semantic cohesion between connected beads",
-    weight: 0.3,
-  },
-  novelty: {
-    label: "Novelty",
-    desc: "Rarity of n-grams vs baseline corpus",
-    weight: 0.2,
-  },
-  integrity: {
-    label: "Integrity",
-    desc: "Lack of contradictions between beads",
-    weight: 0.2,
-  },
-  aesthetics: {
-    label: "Aesthetics",
-    desc: "Beauty via bead contributions",
-    weight: 0.2,
-  },
-  resilience: {
-    label: "Resilience",
-    desc: "Structural robustness of the web",
-    weight: 0.1,
-  },
-} as const;
-
-
 export default function App() {
   const [matchId, setMatchId] = useState<string>(() => localStorage.getItem("matchId") || "");
   const [handle, setHandle] = useState<string>(() => localStorage.getItem("handle") || "");
@@ -55,6 +26,22 @@ export default function App() {
   const { state, setState, connect } = useMatchState(undefined, { autoConnect: false });
   const currentPlayer = state?.players.find(p => p.id === state.currentPlayerId);
   const isMyTurn = currentPlayer?.id === playerId;
+
+  const displayPlayer = (id: string) => {
+    const player = state?.players.find((p) => p.id === id);
+    return player?.handle || id;
+  };
+
+  const formatPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
+
+  const safeSummary = scroll?.summary ?? {
+    leadingPlayer: scroll?.winner,
+    axisLeads: [],
+    strongPathCount: scroll?.strongPaths?.length ?? 0,
+    weakSpotCount: scroll?.weakSpots?.length ?? 0,
+  };
+  const dialogueTurns = scroll?.dialogue?.turns ?? [];
+  const magisterName = scroll?.dialogue?.magister ?? "Magister Ludi";
 
   const remainingResources = (type: Move["type"]) => {
     if (!currentPlayer) return null;
@@ -696,44 +683,74 @@ export default function App() {
             )}
             {scroll && (
               <section className="mt-6">
-                <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Judgment</h3>
-                  <div className="mt-2 text-sm">
-                    <div className="mb-2">Winner: {scroll.winner || "TBD"}</div>
-                    <ul className="space-y-2">
-                      {Object.entries(scroll.scores).map(([pid, s]) => (
-                        <li key={pid} className="text-xs">
-                          <div><b>{pid}</b>: {(s.total * 100).toFixed(1)}%</div>
-                          <ul className="ml-4 space-y-0.5">
-                            {Object.entries(AXIS_INFO).map(([axis, info]) => (
-                              <li key={axis}>
-                                {info.label}: {(s[axis as keyof typeof AXIS_INFO] * 100).toFixed(1)}% × {Math.round(info.weight * 100)}% = {(s.contributions[axis as keyof typeof AXIS_INFO] * 100).toFixed(1)}% – {info.desc}
-                              </li>
-                            ))}
-                          </ul>
-                        </li>
-                      ))}
-                    </ul>
-                    {scroll.strongPaths.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="text-xs uppercase tracking-wide text-[var(--muted)]">Strong Paths</h4>
-                        <ul className="mt-1 space-y-1">
-                          {scroll.strongPaths.map((p, idx) => (
-                            <li key={idx}>
-                              <button onClick={() => setSelectedPath(idx)} className={`text-xs underline ${selectedPath === idx ? 'font-bold' : ''}`}>
-                                {p.nodes.join(' → ')} {p.why && `(${p.why})`}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {scroll.weakSpots.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="text-xs uppercase tracking-wide text-[var(--muted)]">Weak Spots</h4>
-                        <div className="text-xs">{scroll.weakSpots.join(', ')}</div>
-                      </div>
-                    )}
+                <h3 className="text-sm uppercase tracking-wide text-[var(--muted)]">Magister's Judgment</h3>
+                <div className="mt-2 text-sm space-y-4">
+                  <div className="p-4 rounded-xl bg-zinc-900/60 border border-zinc-800">
+                    <div className="text-xs uppercase tracking-wide text-[var(--muted)]">{magisterName}</div>
+                    <div className="mt-1 text-base font-medium">
+                      {scroll.winner ? `${displayPlayer(scroll.winner)} carries the laurel.` : "No laurel bestowed yet."}
+                    </div>
+                    <div className="mt-2 text-xs text-[var(--muted)]">
+                      Paths traced: {safeSummary.strongPathCount} · Quiet beads: {safeSummary.weakSpotCount}
+                    </div>
                   </div>
+                  <div className="space-y-3">
+                    {dialogueTurns.map((turn, idx) => {
+                      if (turn.kind === "axis-insight") {
+                        return (
+                          <article key={idx} className="p-4 rounded-xl bg-zinc-900/50 border border-zinc-800/80">
+                            <header className="flex items-baseline justify-between gap-2">
+                              <span className="text-xs uppercase tracking-wide text-[var(--muted)]">{turn.title}</span>
+                              <span className="text-[var(--muted)] text-xs">axis: {turn.axis}</span>
+                            </header>
+                            <p className="mt-2 leading-relaxed">{turn.insight}</p>
+                            <ul className="mt-3 text-xs space-y-1">
+                              {turn.ranking.map((entry) => (
+                                <li key={entry.playerId} className="flex justify-between gap-2">
+                                  <span className="font-medium">{displayPlayer(entry.playerId)}</span>
+                                  <span className="opacity-70">
+                                    tone {formatPercent(entry.value)} · influence {formatPercent(entry.contribution)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            <p className="mt-3 text-xs italic text-[var(--muted)]">{turn.prompt}</p>
+                          </article>
+                        );
+                      }
+                      if (turn.kind === "path-story") {
+                        return (
+                          <article key={idx} className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-900/60">
+                            <header className="flex items-baseline justify-between gap-2">
+                              <span className="text-xs uppercase tracking-wide text-emerald-200">{turn.title}</span>
+                              <span className="text-xs text-emerald-200/80">weight {turn.weight.toFixed(2)}</span>
+                            </header>
+                            <p className="mt-2 leading-relaxed">{turn.story}</p>
+                            <div className="mt-2 text-xs text-emerald-200/90">{turn.nodes.join(" → ")}</div>
+                            <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                              <button
+                                onClick={() => setSelectedPath(turn.pathIndex)}
+                                className={`px-3 py-1 rounded-full border ${selectedPath === turn.pathIndex ? 'border-emerald-300 text-emerald-200' : 'border-emerald-700 text-emerald-200/80'}`}
+                              >
+                                Trace path
+                              </button>
+                              <span className="italic text-emerald-200/70">{turn.prompt}</span>
+                            </div>
+                          </article>
+                        );
+                      }
+                      return (
+                        <article key={idx} className="p-4 rounded-xl bg-indigo-950/40 border border-indigo-900/60">
+                          <header className="flex items-baseline justify-between gap-2">
+                            <span className="text-xs uppercase tracking-wide text-indigo-200">{turn.title}</span>
+                          </header>
+                          <p className="mt-2 leading-relaxed">{turn.reflection}</p>
+                          <p className="mt-3 text-xs italic text-indigo-200/80">{turn.prompt}</p>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </div>
               </section>
             )}
           </>

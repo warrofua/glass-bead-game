@@ -71,12 +71,71 @@ export interface JudgedScores {
   total: number;
 }
 
+export const JUDGMENT_AXES = [
+  "resonance",
+  "novelty",
+  "integrity",
+  "aesthetics",
+  "resilience",
+] as const;
+
+export type JudgmentAxis = (typeof JUDGMENT_AXES)[number];
+
+export interface JudgmentAxisLead {
+  axis: JudgmentAxis;
+  leader: string;
+  value: number;
+  margin: number;
+}
+
+export interface JudgmentSummary {
+  leadingPlayer?: string;
+  axisLeads: JudgmentAxisLead[];
+  strongPathCount: number;
+  weakSpotCount: number;
+}
+
+export interface AxisInsightTurn {
+  kind: "axis-insight";
+  axis: JudgmentAxis;
+  title: string;
+  insight: string;
+  ranking: Array<{ playerId: string; value: number; contribution: number }>;
+  prompt: string;
+}
+
+export interface PathStoryTurn {
+  kind: "path-story";
+  title: string;
+  nodes: string[];
+  weight: number;
+  pathIndex: number;
+  story: string;
+  prompt?: string;
+}
+
+export interface ClosingTurn {
+  kind: "closing";
+  title: string;
+  reflection: string;
+  prompt: string;
+}
+
+export type JudgmentDialogueTurn = AxisInsightTurn | PathStoryTurn | ClosingTurn;
+
+export interface JudgmentDialogue {
+  magister: string;
+  turns: JudgmentDialogueTurn[];
+}
+
 export interface JudgmentScroll {
   winner?: string;
   scores: Record<string, JudgedScores>;
   strongPaths: Array<{ nodes: string[]; why: string }>;
   weakSpots: string[];
   missedFuse?: string;
+  summary: JudgmentSummary;
+  dialogue: JudgmentDialogue;
 }
 
 // --- Sanitization helper ---
