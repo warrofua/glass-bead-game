@@ -33,7 +33,7 @@ test('validateMove cast success and failure', () => {
     round: 1,
     phase: 'play',
     players: [
-      { id: 'p1', handle: 'P1', resources: { insight: 1, restraint: 1, wildAvailable: false } },
+      { id: 'p1', handle: 'P1' },
     ],
     seeds: [],
     beads: {},
@@ -106,7 +106,7 @@ test('validateMove bind success and failure', () => {
     round: 1,
     phase: 'play',
     players: [
-      { id: 'p1', handle: 'P1', resources: { insight: 1, restraint: 1, wildAvailable: false } },
+      { id: 'p1', handle: 'P1' },
     ],
     seeds: [],
     beads: { b1: bead1, b2: bead2 },
@@ -217,14 +217,26 @@ test('applyMove mutates state for cast and bind', () => {
   assert.equal(state.updatedAt, 2);
 });
 
-test('applyMoveWithResources deducts resources and uses wild', () => {
+test('applyMoveWithResources respects advanced orders flag', () => {
   const state: GameState = {
     id: 'g1',
     round: 1,
     phase: 'play',
     players: [
-      { id: 'p1', handle: 'P1', resources: { insight: 2, restraint: 0, wildAvailable: true } },
-      { id: 'p2', handle: 'P2', resources: { insight: 0, restraint: 1, wildAvailable: true } },
+      {
+        id: 'p1',
+        handle: 'P1',
+        advancedOrders: {
+          resources: { insight: 2, restraint: 0, wildAvailable: true },
+        },
+      },
+      {
+        id: 'p2',
+        handle: 'P2',
+        advancedOrders: {
+          resources: { insight: 0, restraint: 1, wildAvailable: true },
+        },
+      },
     ],
     seeds: [],
     beads: {},
@@ -232,92 +244,58 @@ test('applyMoveWithResources deducts resources and uses wild', () => {
     moves: [],
     createdAt: 0,
     updatedAt: 0,
+    advancedOrders: { enabled: true },
   };
 
-  const cast1: Move = {
-    id: 'c1',
+  const makeCast = (id: string): Move => ({
+    id,
     playerId: 'p1',
     type: 'cast',
     payload: {
       bead: {
-        id: 'b1',
+        id: `b_${id}`,
         ownerId: 'p1',
         modality: 'text',
-        content: 'one',
+        content: 'idea',
         complexity: 1,
         createdAt: 0,
       } satisfies Bead,
     },
-    timestamp: 1,
+    timestamp: Date.now(),
     durationMs: 0,
     valid: true,
-  };
-  applyMoveWithResources(state, cast1);
-  assert.equal(state.players[0].resources.insight, 1);
-  assert.equal(state.players[0].resources.wildAvailable, true);
+  });
 
-  const cast2: Move = {
-    id: 'c2',
-    playerId: 'p1',
-    type: 'cast',
-    payload: {
-      bead: {
-        id: 'b2',
-        ownerId: 'p1',
-        modality: 'text',
-        content: 'two',
-        complexity: 1,
-        createdAt: 0,
-      } satisfies Bead,
-    },
-    timestamp: 2,
-    durationMs: 0,
-    valid: true,
-  };
-  applyMoveWithResources(state, cast2);
-  assert.equal(state.players[0].resources.insight, 0);
-  assert.equal(state.players[0].resources.wildAvailable, true);
+  applyMoveWithResources(state, makeCast('c1'));
+  assert.equal(state.players[0].advancedOrders?.resources.insight, 1);
+  assert.equal(state.players[0].advancedOrders?.resources.wildAvailable, true);
 
-  const cast3: Move = {
-    id: 'c3',
-    playerId: 'p1',
-    type: 'cast',
-    payload: {
-      bead: {
-        id: 'b3',
-        ownerId: 'p1',
-        modality: 'text',
-        content: 'three',
-        complexity: 1,
-        createdAt: 0,
-      } satisfies Bead,
-    },
-    timestamp: 3,
-    durationMs: 0,
-    valid: true,
-  };
-  applyMoveWithResources(state, cast3);
-  assert.equal(state.players[0].resources.insight, 0);
-  assert.equal(state.players[0].resources.wildAvailable, false);
+  applyMoveWithResources(state, makeCast('c2'));
+  assert.equal(state.players[0].advancedOrders?.resources.insight, 0);
+  assert.equal(state.players[0].advancedOrders?.resources.wildAvailable, true);
 
-  const bind1: Move = {
+  applyMoveWithResources(state, makeCast('c3'));
+  assert.equal(state.players[0].advancedOrders?.resources.insight, 0);
+  assert.equal(state.players[0].advancedOrders?.resources.wildAvailable, false);
+
+  const bind: Move = {
     id: 'b1',
     playerId: 'p2',
     type: 'bind',
     payload: {
       edgeId: 'e1',
-      from: 'b1',
-      to: 'b2',
+      from: 'b_c1',
+      to: 'b_c2',
       label: 'analogy',
       justification: 'First. Second.',
     },
-    timestamp: 4,
+    timestamp: Date.now(),
     durationMs: 0,
     valid: true,
   };
-  applyMoveWithResources(state, bind1);
-  assert.equal(state.players[1].resources.restraint, 0);
-  assert.equal(state.players[1].resources.wildAvailable, true);
+  applyMoveWithResources(state, bind);
+  assert.equal(state.players[1].advancedOrders?.resources.restraint, 0);
+  assert.equal(state.players[1].advancedOrders?.resources.wildAvailable, true);
 
   const bind2: Move = {
     id: 'b2',
@@ -325,67 +303,16 @@ test('applyMoveWithResources deducts resources and uses wild', () => {
     type: 'bind',
     payload: {
       edgeId: 'e2',
-      from: 'b2',
-      to: 'b3',
+      from: 'b_c2',
+      to: 'b_c3',
       label: 'analogy',
       justification: 'Another. Again.',
     },
-    timestamp: 5,
+    timestamp: Date.now(),
     durationMs: 0,
     valid: true,
   };
   applyMoveWithResources(state, bind2);
-  assert.equal(state.players[1].resources.restraint, 0);
-  assert.equal(state.players[1].resources.wildAvailable, false);
+  assert.equal(state.players[1].advancedOrders?.resources.restraint, 0);
+  assert.equal(state.players[1].advancedOrders?.resources.wildAvailable, false);
 });
-
-test('mirror move must change modality', () => {
-  const bead1: Bead = {
-    id: 'b1', ownerId: 'p1', modality: 'text', content: 'a', complexity: 1, createdAt: 0,
-  };
-  const state: GameState = {
-    id: 'g1', round: 1, phase: 'play',
-    players: [{ id: 'p1', handle: 'P1', resources: { insight: 1, restraint: 0, wildAvailable: false } }],
-    seeds: [], beads: { b1: bead1 }, edges: {}, moves: [], createdAt: 0, updatedAt: 0,
-  };
-
-  const sameMod: Move = {
-    id: 'm1', playerId: 'p1', type: 'mirror',
-    payload: { targetId: 'b1', bead: { id: 'b2', ownerId: 'p1', modality: 'text', content: 'b', complexity: 1, createdAt: 0 } },
-    timestamp: 1, durationMs: 0, valid: true,
-  };
-  assert.equal(validateMove(sameMod, state).ok, false);
-
-  const diffMod: Move = {
-    id: 'm2', playerId: 'p1', type: 'mirror',
-    payload: { targetId: 'b1', bead: { id: 'b3', ownerId: 'p1', modality: 'image', content: 'img', complexity: 1, createdAt: 0 } },
-    timestamp: 2, durationMs: 0, valid: true,
-  };
-  assert.equal(validateMove(diffMod, state).ok, true);
-});
-
-test('counterpoint respects twist relation', () => {
-  const bead1: Bead = { id: 'b1', ownerId: 'p1', modality: 'text', content: 'a', complexity: 1, createdAt: 0 };
-  const bead2: Bead = { id: 'b2', ownerId: 'p1', modality: 'image', content: 'b', complexity: 1, createdAt: 0 };
-  const state: GameState = {
-    id: 'g1', round: 1, phase: 'play',
-    players: [{ id: 'p1', handle: 'P1', resources: { insight: 1, restraint: 0, wildAvailable: false } }],
-    seeds: [], beads: { b1: bead1, b2: bead2 }, edges: {}, moves: [], createdAt: 0, updatedAt: 0,
-    twist: { id: 't1', name: 'R', description: 'require motif', effect: { requiredRelation: 'motif-echo' } },
-  };
-
-  const bad: Move = {
-    id: 'c1', playerId: 'p1', type: 'counterpoint',
-    payload: { from: 'b1', to: 'b2', label: 'analogy', justification: 'First. Second.' },
-    timestamp: 1, durationMs: 0, valid: true,
-  };
-  assert.equal(validateMove(bad, state).ok, false);
-
-  const good: Move = {
-    id: 'c2', playerId: 'p1', type: 'counterpoint',
-    payload: { from: 'b1', to: 'b2', label: 'motif-echo', justification: 'First. Second.' },
-    timestamp: 2, durationMs: 0, valid: true,
-  };
-  assert.equal(validateMove(good, state).ok, true);
-});
-

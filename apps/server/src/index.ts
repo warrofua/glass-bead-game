@@ -8,11 +8,9 @@ import {
   GameState,
   Player,
   Move,
-  sanitizeMarkdown,
-  ConstraintCard,
+  sanitizeMarkdown
 } from "@gbg/types";
 import registerMoveRoute from "./routes/move.js";
-import registerConcordRoute from "./routes/concord.js";
 import judge from "./judge/index.js";
 import judgeWithLLM from "./judge/llm.js";
 import generateSeeds from "./seeds.js";
@@ -62,28 +60,6 @@ await loadRatings();
 // --- Utility
 function now(){ return Date.now(); }
 
-function sampleTwists(): ConstraintCard[]{
-  return [
-    {
-      id: 't1',
-      name: 'Text Only',
-      description: 'Only text beads allowed',
-      effect: { modalityLock: ['text'] }
-    },
-    {
-      id: 't2',
-      name: 'Motif Echo',
-      description: 'Relations must be motif-echo',
-      effect: { requiredRelation: 'motif-echo' }
-    },
-    {
-      id: 't3',
-      name: 'Short Justification',
-      description: 'Justifications capped at 40 chars',
-      effect: { justificationLimit: 40 }
-    }
-  ];
-}
 function broadcast(matchId: string, type: string, payload: any){
   const set = sockets.get(matchId); if(!set) return;
   const msg = JSON.stringify({ type, payload });
@@ -126,7 +102,7 @@ fastify.post("/match", async (req, reply) => {
   const seeds = await generateSeeds();
   const state: GameState = {
     id, round: 1, phase:"SeedDraw", players: [], currentPlayerId: undefined, seeds,
-    beads: {}, edges: {}, moves: [], twistDeck: sampleTwists(), createdAt: now(), updatedAt: now()
+    beads: {}, edges: {}, moves: [], createdAt: now(), updatedAt: now()
   };
   matches.set(id, state);
   return reply.send(state);
@@ -141,7 +117,6 @@ fastify.post<{ Params: { id: string } }>("/match/:id/join", async (req, reply) =
   const player: Player = {
     id: randomUUID().slice(0,6),
     handle: sanitizeMarkdown(handle || "Player"+(state.players.length+1)),
-    resources: { insight: 5, restraint: 2, wildAvailable: true }
   };
   state.players.push(player);
   if(!state.currentPlayerId){
@@ -167,21 +142,7 @@ fastify.get<{ Params: { id: string } }>("/match/:id/log", async (req, reply) => 
   return reply.send(state);
 });
 
-fastify.post<{ Params: { id: string } }>("/match/:id/twist", async (req, reply) => {
-  const id = req.params.id;
-  const state = matches.get(id);
-  if(!state) return reply.code(404).send({ error: "No such match" });
-  const next = state.twistDeck?.shift();
-  if(!next) return reply.code(400).send({ error: "No twists remaining" });
-  state.twist = next;
-  state.updatedAt = now();
-  broadcast(id, "state:update", state);
-  return reply.send(next);
-});
-
 registerMoveRoute(fastify, { matches, broadcast, now, logMetrics });
-registerConcordRoute(fastify, { matches, broadcast, now });
-
 fastify.post<{ Params: { id: string } }>("/match/:id/ai", async (req, reply) => {
   const id = req.params.id;
   const { playerId } = (req.body as any) ?? {};
