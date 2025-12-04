@@ -14,7 +14,7 @@ A competitive, collaborative game of idea-weaving where two players cast **beads
   - Reflective archive chronicles for post-match highlights (no public ranking board)
 - **Developer Experience**:
   - Full TypeScript coverage with shared type system
-  - Comprehensive test suite (58 tests, 100% pass rate)
+  - Comprehensive test suite (56 tests: 55 passing, 1 skipped)
   - Fastify backend + React frontend with Tailwind CSS
   - JSON match log export and replay capabilities
   - AI suggestion system for move assistance
@@ -97,7 +97,7 @@ npm test --workspace packages/types
 - Data is in-memory (ephemeral). Suitable for local development and testing.
 - Both deterministic (v0) and LLM-powered (v1) judging are available.
 - See `/packages/types/src/index.ts` for complete type definitions and move schemas.
-- All 58 tests pass with comprehensive coverage across server, web, and types packages.
+- Test suite: 56 tests total (27 server, 10 web, 20 types) with 55 passing and 1 skipped.
 
 ## Architecture
 ![Architecture Diagram](docs/architecture.svg)

@@ -77,7 +77,7 @@ describe('Twist UI', () => {
 
     fireEvent.change(screen.getByPlaceholderText('e.g., MagisterRex'), { target: { value: 'Alice' } });
     fireEvent.click(screen.getByText('Create'));
-    await screen.findByText(/Seed 1/);
+    await ensureSeedListed();
     await completePrelude();
     fireEvent.click(screen.getByText('Join'));
     await waitFor(() => {
