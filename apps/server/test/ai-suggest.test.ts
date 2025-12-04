@@ -21,11 +21,9 @@ test('AI suggestion endpoint returns sanitized text', async () => {
     updatedAt: 0,
   });
 
-  const ollama = {
-    generate() {
-      return (async function* () {
-        yield '<script>alert(1)</script>Hi';
-      })();
+  const mockClient = {
+    async prompt(text: string) {
+      return '<script>alert(1)</script>Hi';
     },
   };
 
@@ -38,9 +36,8 @@ test('AI suggestion endpoint returns sanitized text', async () => {
     const last = [...state.moves].reverse().find((m) => m.playerId !== playerId && m.type === 'cast');
     const opponent = last?.payload?.bead?.content ?? '';
     let suggestion = '';
-    for await (const part of ollama.generate('model', `Seed: ${seed}\nOpponent: ${opponent}\nRespond with a short bead idea:`)) {
-      suggestion += part;
-    }
+    const promptText = `Seed: ${seed}\nOpponent: ${opponent}\nRespond with a short bead idea:`;
+    suggestion = await mockClient.prompt(promptText);
     return reply.send({ suggestion: sanitizeMarkdown(suggestion.trim()) });
   });
 

@@ -43,9 +43,19 @@ To export a match log for replay or analysis, use the **Export Log** button in t
 4. Every move is validated by the server and synced live between players.
 5. Export the log when finished for replay or analysis.
 
+## LLM Configuration (Optional)
+To enable LLM-powered features (Judge v1 and AI suggestions), set the `LLM_MODEL_PATH` environment variable:
+
+```bash
+export LLM_MODEL_PATH=/path/to/your/model.gguf
+npm run dev
+```
+
+The project uses `node-llama-cpp` for local inference. Download a GGUF model file (e.g., Qwen, Llama, Mistral) and point `LLM_MODEL_PATH` to it. If not set, the system falls back to deterministic judging and disables AI suggestions.
+
 ## AI Judging System
 - **Judge v0**: Deterministic scoring across all five axes with weighted contributions
-- **Judge v1**: Optional LLM-powered judging via Ollama (with graceful fallback to v0)
+- **Judge v1**: Optional LLM-powered judging via llama.cpp (with graceful fallback to v0)
 - **Scoring Axes**:
   - **Resonance**: Path-based semantic connectivity
   - **Novelty**: Content uniqueness and creativity

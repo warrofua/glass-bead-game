@@ -3,23 +3,21 @@ import assert from 'node:assert/strict';
 import { generatePrelude, samplePrelude } from '../src/seeds.ts';
 
 test('generatePrelude returns sanitized LLM output', async (t) => {
-  const prev = process.env.LLM_MODEL;
-  process.env.LLM_MODEL = 'test';
+  const prev = process.env.LLM_MODEL_PATH;
+  process.env.LLM_MODEL_PATH = 'test';
   t.after(() => {
-    if (prev === undefined) delete process.env.LLM_MODEL; else process.env.LLM_MODEL = prev;
+    if (prev === undefined) delete process.env.LLM_MODEL_PATH; else process.env.LLM_MODEL_PATH = prev;
   });
   const client = {
-    generate() {
-      return (async function* () {
-        yield JSON.stringify({
-          motifs: [
-            { text: '<script>alert(1)</script>Physics', domain: '<script>alert(1)</script>science' },
-            { text: 'Jazz', domain: 'music' },
-            { text: 'Daoism', domain: 'philosophy' }
-          ],
-          overture: '<script>alert(1)</script>The Magister speaks.'
-        });
-      })();
+    async prompt(text: string) {
+      return JSON.stringify({
+        motifs: [
+          { text: '<script>alert(1)</script>Physics', domain: '<script>alert(1)</script>science' },
+          { text: 'Jazz', domain: 'music' },
+          { text: 'Daoism', domain: 'philosophy' }
+        ],
+        overture: '<script>alert(1)</script>The Magister speaks.'
+      });
     }
   };
   const prelude = await generatePrelude(client);
@@ -31,16 +29,14 @@ test('generatePrelude returns sanitized LLM output', async (t) => {
 });
 
 test('generatePrelude falls back to sample seeds on error', async (t) => {
-  const prev = process.env.LLM_MODEL;
-  process.env.LLM_MODEL = 'test';
+  const prev = process.env.LLM_MODEL_PATH;
+  process.env.LLM_MODEL_PATH = 'test';
   t.after(() => {
-    if (prev === undefined) delete process.env.LLM_MODEL; else process.env.LLM_MODEL = prev;
+    if (prev === undefined) delete process.env.LLM_MODEL_PATH; else process.env.LLM_MODEL_PATH = prev;
   });
   const client = {
-    generate() {
-      return (async function* () {
-        throw new Error('fail');
-      })();
+    async prompt(text: string) {
+      throw new Error('fail');
     }
   };
   const prelude = await generatePrelude(client);
@@ -48,29 +44,27 @@ test('generatePrelude falls back to sample seeds on error', async (t) => {
 });
 
 test('generatePrelude extracts JSON object from prose or code fences', async (t) => {
-  const prev = process.env.LLM_MODEL;
-  process.env.LLM_MODEL = 'test';
+  const prev = process.env.LLM_MODEL_PATH;
+  process.env.LLM_MODEL_PATH = 'test';
   t.after(() => {
-    if (prev === undefined) delete process.env.LLM_MODEL;
-    else process.env.LLM_MODEL = prev;
+    if (prev === undefined) delete process.env.LLM_MODEL_PATH;
+    else process.env.LLM_MODEL_PATH = prev;
   });
   const client = {
-    generate() {
-      return (async function* () {
-        yield [
-          'Here is your prelude:',
-          '```json',
-          JSON.stringify({
-            motifs: [
-              { text: 'Astrophysics', domain: 'science' },
-              { text: 'Cubism', domain: 'art' }
-            ],
-            overture: 'A crisp overture.'
-          }),
-          '```',
-          'Enjoy!'
-        ].join('\n');
-      })();
+    async prompt(text: string) {
+      return [
+        'Here is your prelude:',
+        '```json',
+        JSON.stringify({
+          motifs: [
+            { text: 'Astrophysics', domain: 'science' },
+            { text: 'Cubism', domain: 'art' }
+          ],
+          overture: 'A crisp overture.'
+        }),
+        '```',
+        'Enjoy!'
+      ].join('\n');
     }
   };
   const prelude = await generatePrelude(client);

@@ -29,10 +29,8 @@ const state: GameState = {
 
 test('LLM judge overrides baseline winner with model output', async () => {
   const client = {
-    generate(_model: string, _prompt: string) {
-      return (async function* () {
-        yield '{"winner":"p2"}';
-      })();
+    async prompt(_text: string) {
+      return '{"winner":"p2"}';
     }
   };
 
@@ -42,10 +40,8 @@ test('LLM judge overrides baseline winner with model output', async () => {
 
 test('LLM judge falls back to baseline winner on error', async () => {
   const client = {
-    generate() {
-      return (async function* () {
-        throw new Error('fail');
-      })();
+    async prompt(_text: string) {
+      throw new Error('fail');
     }
   };
 

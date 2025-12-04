@@ -1,8 +1,8 @@
 import { Prelude, Seed, sanitizeMarkdown } from '@gbg/types';
-import { Ollama } from 'ollama';
+import { LlamaCppClient } from './judge/llm.js';
 
 interface LLMClient {
-  generate(model: string, prompt: string): AsyncIterable<string>;
+  prompt(text: string): Promise<string>;
 }
 
 function formatList(items: string[]): string {
@@ -51,24 +51,23 @@ function normalizeMotifs(raw: any[]): Array<Pick<Seed, 'text' | 'domain'>> {
 }
 
 export async function generatePrelude(
-  client: LLMClient = new Ollama()
+  client?: LLMClient
 ): Promise<Prelude> {
-  const model = process.env.LLM_MODEL;
+  const modelPath = process.env.LLM_MODEL_PATH;
   const fallback = samplePrelude();
-  if (!model) return fallback;
+  if (!modelPath) return fallback;
 
   try {
-    const prompt = [
+    const llmClient = client || new LlamaCppClient();
+
+    const promptText = [
       'You are Magister Ludi. Respond with pure JSON matching',
       '{"motifs":[{"text":"","domain":""},...],"overture":""}.',
       'Return three motifs from distinct knowledge domains and a single-paragraph',
       'overture (<240 characters) inviting players to weave them together.'
     ].join(' ');
 
-    let output = '';
-    for await (const part of client.generate(model, prompt)) {
-      output += part;
-    }
+    const output = await llmClient.prompt(promptText);
 
     const start = output.indexOf('{');
     const end = output.lastIndexOf('}');

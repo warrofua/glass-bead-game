@@ -14,9 +14,8 @@ import {
 import registerMoveRoute from "./routes/move.js";
 import registerConcordRoute from "./routes/concord.js";
 import judge from "./judge/index.js";
-import judgeWithLLM from "./judge/llm.js";
+import judgeWithLLM, { LlamaCppClient } from "./judge/llm.js";
 import generatePrelude from "./seeds.js";
-import { Ollama } from "ollama";
 
 const fastify = Fastify({ logger: false });
 await fastify.register(cors, { origin: true });
@@ -158,12 +157,9 @@ fastify.post<{ Params: { id: string } }>("/match/:id/ai", async (req, reply) => 
   const opponent = last?.payload?.bead?.content ?? "";
   let suggestion = "";
   try {
-    const model = process.env.LLM_MODEL || "qwen7b:latest";
-    const client = new Ollama();
-    const prompt = `Seed: ${seed}\nOpponent: ${opponent}\nRespond with a short bead idea:`;
-    for await (const part of client.generate(model, prompt)) {
-      suggestion += part;
-    }
+    const client = new LlamaCppClient();
+    const promptText = `Seed: ${seed}\nOpponent: ${opponent}\nRespond with a short bead idea:`;
+    suggestion = await client.prompt(promptText);
   } catch (err) {
     console.warn("LLM suggest failed", err);
   }
@@ -174,7 +170,7 @@ fastify.post<{ Params: { id: string } }>("/match/:id/judge", async (req, reply) 
   const id = req.params.id;
   const state = matches.get(id);
   if(!state) return reply.code(404).send({ error: "No such match" });
-  const useLlm = !!process.env.LLM_MODEL;
+  const useLlm = !!process.env.LLM_MODEL_PATH;
   const scroll = useLlm ? await judgeWithLLM(state) : judge(state);
   broadcast(id, "end:judgment", scroll);
   return reply.send(scroll);

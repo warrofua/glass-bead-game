@@ -34,16 +34,16 @@ test('players can join a match and be listed in state', async (t) => {
 });
 
 test('match handles all move types and returns AI judgment', async (t) => {
-  const prevModel = process.env.LLM_MODEL;
-  process.env.LLM_MODEL = 'test';
+  const prevModel = process.env.LLM_MODEL_PATH;
+  process.env.LLM_MODEL_PATH = 'test';
 
   let server: ChildProcess;
   t.after(() => {
     server?.kill();
     if (prevModel === undefined) {
-      delete process.env.LLM_MODEL;
+      delete process.env.LLM_MODEL_PATH;
     } else {
-      process.env.LLM_MODEL = prevModel;
+      process.env.LLM_MODEL_PATH = prevModel;
     }
   });
 
